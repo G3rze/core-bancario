@@ -1,0 +1,13 @@
+# Backend (Maven)
+backend/target/
+backend/datos/*.dat
+
+# Frontend (Angular)
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# IDE
+.idea/
+.vscode/
+*.iml
