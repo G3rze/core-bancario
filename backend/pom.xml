@@ -27,6 +27,14 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Carga backend/.env (KEY=VALUE) como property source al arrancar,
+             para no depender de exportar variables de entorno a mano. -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+
         <!-- Declaradas para el milestone de integracion con PostgreSQL/JPA.
              No se usan todavia: la persistencia de este avance es via
              serializacion Java a archivos .dat (ver dao/). -->

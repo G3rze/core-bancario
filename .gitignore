@@ -1,6 +1,7 @@
 # Backend (Maven)
 backend/target/
 backend/datos/*.dat
+backend/.env
 
 # Frontend (Angular)
 frontend/node_modules/
