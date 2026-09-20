@@ -20,6 +20,21 @@ core-bancario/
 └── docs/       # Documentacion del proyecto
 ```
 
+## Variables de entorno
+
+El backend lee configuracion (puerto, origen CORS permitido, nivel de log)
+desde `backend/.env`, cargado automaticamente al arrancar (via
+[spring-dotenv](https://github.com/paulschwarz/spring-dotenv)). Antes de
+correrlo por primera vez:
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+`.env` no se commitea (esta en `.gitignore`); `.env.example` documenta las
+variables disponibles.
+
 ## Como correr el backend
 
 ```bash
