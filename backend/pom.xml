@@ -19,6 +19,10 @@
 
     <properties>
         <java.version>21</java.version>
+        <!-- El daemon Docker local exige API >= 1.40; el Testcontainers que
+             trae el BOM de Spring Boot 3.4.1 (1.20.4) hace un ping inicial
+             con una version de API mas vieja y el daemon lo rechaza. -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -35,9 +39,8 @@
             <version>5.1.0</version>
         </dependency>
 
-        <!-- Declaradas para el milestone de integracion con PostgreSQL/JPA.
-             No se usan todavia: la persistencia de este avance es via
-             serializacion Java a archivos .dat (ver dao/). -->
+        <!-- Cliente/Cuenta/Empleado persisten en Postgres via JPA (Transaccion
+             sigue en .dat como log, ver dao/ArchivoDao y model/entity/RegistroTransaccion). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -51,6 +54,25 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Postgres real y efimero para los tests de service/impl que tocan
+             JPA (Cliente/Cuenta/Empleado), en vez de H2: mismo motor que
+             produccion, sin mantener dos dialectos SQL distintos. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

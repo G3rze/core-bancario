@@ -1,12 +1,12 @@
 package com.banco.core.dao;
 
-import com.banco.core.model.entity.Transaccion;
+import com.banco.core.model.entity.RegistroTransaccion;
 import org.springframework.stereotype.Repository;
 
 import java.nio.file.Path;
 
 @Repository
-public class TransaccionDAO extends ArchivoDao<Transaccion> {
+public class TransaccionDAO extends ArchivoDao<RegistroTransaccion> {
 
     private static final Path RUTA_POR_DEFECTO = Path.of("datos", "transacciones.dat");
 
@@ -19,12 +19,12 @@ public class TransaccionDAO extends ArchivoDao<Transaccion> {
     }
 
     @Override
-    protected Long idDe(Transaccion entidad) {
+    protected Long idDe(RegistroTransaccion entidad) {
         return entidad.getId();
     }
 
     @Override
-    protected void asignarId(Transaccion entidad, Long id) {
+    protected void asignarId(RegistroTransaccion entidad, Long id) {
         entidad.setId(id);
     }
 }

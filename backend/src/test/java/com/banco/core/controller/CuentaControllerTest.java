@@ -3,8 +3,7 @@ package com.banco.core.controller;
 import com.banco.core.model.entity.Cliente;
 import com.banco.core.model.entity.Cuenta;
 import com.banco.core.model.entity.CuentaAhorros;
-import com.banco.core.model.entity.Deposito;
-import com.banco.core.model.entity.Transaccion;
+import com.banco.core.model.entity.RegistroTransaccion;
 import com.banco.core.model.entity.TipoCliente;
 import com.banco.core.service.CuentaService;
 import org.junit.jupiter.api.Test;
@@ -15,6 +14,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.mockito.Mockito.when;
@@ -58,8 +58,9 @@ class CuentaControllerTest {
     @Test
     void depositarDelegaEnElServiceYDevuelveElComprobante() throws Exception {
         Cuenta cuenta = cuentaPrueba();
-        Transaccion deposito = new Deposito(cuenta, new BigDecimal("50.00"));
-        deposito.ejecutar();
+        RegistroTransaccion deposito = new RegistroTransaccion(
+                "TRX-000001", "Deposito", new BigDecimal("50.00"), LocalDateTime.now(),
+                "COMPLETADA", cuenta.getNumeroCuenta(), null, null);
         when(cuentaService.depositar(cuenta.getNumeroCuenta(), new BigDecimal("50.00"))).thenReturn(deposito);
 
         mockMvc.perform(post("/api/cuentas/" + cuenta.getNumeroCuenta() + "/depositos")

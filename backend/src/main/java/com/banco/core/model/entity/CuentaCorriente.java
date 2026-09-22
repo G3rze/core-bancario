@@ -1,11 +1,14 @@
 package com.banco.core.model.entity;
 
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
 import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicLong;
 
+@Entity
+@DiscriminatorValue("CORRIENTE")
 public class CuentaCorriente extends Cuenta {
-
-    private static final long serialVersionUID = 1L;
 
     private static final AtomicLong CONTADOR_CORRIENTE = new AtomicLong(1);
 
@@ -16,6 +19,19 @@ public class CuentaCorriente extends Cuenta {
     public CuentaCorriente(Cliente titular, BigDecimal saldoInicial) {
         super("COR-%06d".formatted(CONTADOR_CORRIENTE.getAndIncrement()), titular, saldoInicial,
                 MONTO_MINIMO_APERTURA, LIMITE_RETIRO_DIARIO);
+    }
+
+    protected CuentaCorriente() {
+    }
+
+    /**
+     * Ver Cliente.avanzarContador(): mismo problema (el contador de
+     * numeroCuenta reinicia en cada arranque de la JVM aunque el id ya lo
+     * genere Postgres), mismo arreglo.
+     */
+    public static void avanzarContador(String numeroCuenta) {
+        long valor = Long.parseLong(numeroCuenta.substring(4));
+        CONTADOR_CORRIENTE.updateAndGet(actual -> Math.max(actual, valor + 1));
     }
 
     @Override

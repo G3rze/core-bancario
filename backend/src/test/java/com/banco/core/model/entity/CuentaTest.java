@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CuentaTest {
 
@@ -94,5 +95,19 @@ class CuentaTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 new CuentaPlazoFijo(cliente, new BigDecimal("1000.00"), 5));
+    }
+
+    @Test
+    void avanzarContadorEvitaQueUnaCuentaNuevaRepitaUnNumeroYaUsado() {
+        // Simula lo que CuentaServiceImpl.cargarDesdeDisco() hace al
+        // reiniciar la JVM con cuentas ya persistidas: sin este avance, el
+        // contador estatico (que arranca en 1 en cada arranque) podria
+        // repetir un numero ya usado por una cuenta cargada del .dat.
+        CuentaAhorros.avanzarContador("AHO-999999");
+
+        Cuenta cuenta = new CuentaAhorros(crearClientePrueba(), new BigDecimal("100.00"));
+
+        long numero = Long.parseLong(cuenta.getNumeroCuenta().substring(4));
+        assertTrue(numero > 999999);
     }
 }

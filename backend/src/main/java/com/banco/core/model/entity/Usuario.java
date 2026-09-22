@@ -1,23 +1,51 @@
 package com.banco.core.model.entity;
 
-import java.io.Serializable;
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.MappedSuperclass;
+
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-public abstract class Usuario implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+/**
+ * @MappedSuperclass (no @Entity): Cliente y Empleado nunca se consultan
+ * como "todos los Usuario" juntos -son conceptos de negocio distintos con
+ * tablas propias (clientes, empleados)-, asi que no amerita una jerarquia
+ * polimorfica compartida en la base de datos. Los campos de aqui se
+ * heredan como columnas normales en cada tabla concreta.
+ */
+@MappedSuperclass
+public abstract class Usuario {
 
     private static final Pattern PATRON_DUI = Pattern.compile("^\\d{8}-\\d$");
     private static final Pattern PATRON_TELEFONO = Pattern.compile("^\\d{4}-\\d{4}$");
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // unique = true: dui esta @MappedSuperclass, asi que esta constraint se
+    // aplica por separado en cada tabla concreta (clientes.dui,
+    // empleados.dui) - correcto, cada una necesita su propia unicidad.
+    @Column(nullable = false, unique = true)
     private String dui;
+
+    @Column(nullable = false)
     private String nombre;
+
+    @Column(nullable = false)
     private String direccion;
+
+    @Column(nullable = false)
     private String telefono;
+
+    @Column(nullable = false, updatable = false)
     private final LocalDateTime fechaRegistro;
+
+    @Column(nullable = false)
     private boolean activo;
 
     protected Usuario(String dui, String nombre, String direccion, String telefono) {
@@ -27,6 +55,11 @@ public abstract class Usuario implements Serializable {
         setTelefono(telefono);
         this.fechaRegistro = LocalDateTime.now();
         this.activo = true;
+    }
+
+    /** Constructor sin argumentos exigido por JPA; no usar directamente. */
+    protected Usuario() {
+        this.fechaRegistro = null;
     }
 
     public abstract String getRol();

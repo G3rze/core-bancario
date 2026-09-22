@@ -1,14 +1,18 @@
 package com.banco.core.model.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+@Entity
+@DiscriminatorValue("PLAZO_FIJO")
 public class CuentaPlazoFijo extends Cuenta {
-
-    private static final long serialVersionUID = 1L;
 
     private static final AtomicLong CONTADOR_PLAZO_FIJO = new AtomicLong(1);
 
@@ -21,7 +25,10 @@ public class CuentaPlazoFijo extends Cuenta {
     private static final BigDecimal TASA_INTERES_ANUAL = new BigDecimal("0.06");
     private static final Set<Integer> PLAZOS_VALIDOS = Set.of(3, 6, 12, 24);
 
+    @Column(name = "plazo_meses")
     private final int plazoMeses;
+
+    @Column(name = "fecha_vencimiento")
     private final LocalDateTime fechaVencimiento;
 
     public CuentaPlazoFijo(Cliente titular, BigDecimal saldoInicial, int plazoMeses) {
@@ -32,6 +39,21 @@ public class CuentaPlazoFijo extends Cuenta {
         }
         this.plazoMeses = plazoMeses;
         this.fechaVencimiento = getFechaApertura().plusMonths(plazoMeses);
+    }
+
+    protected CuentaPlazoFijo() {
+        this.plazoMeses = 0;
+        this.fechaVencimiento = null;
+    }
+
+    /**
+     * Ver Cliente.avanzarContador(): mismo problema (el contador de
+     * numeroCuenta reinicia en cada arranque de la JVM aunque el id ya lo
+     * genere Postgres), mismo arreglo.
+     */
+    public static void avanzarContador(String numeroCuenta) {
+        long valor = Long.parseLong(numeroCuenta.substring(4));
+        CONTADOR_PLAZO_FIJO.updateAndGet(actual -> Math.max(actual, valor + 1));
     }
 
     @Override

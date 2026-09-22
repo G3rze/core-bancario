@@ -95,4 +95,19 @@ class TransaccionTest {
         assertTrue(comprobante.contains(deposito.getNumeroTransaccion()));
         assertTrue(comprobante.contains("50.00"));
     }
+
+    @Test
+    void avanzarContadorEvitaQueUnaTransaccionNuevaRepitaUnNumeroYaUsado() {
+        // Simula lo que CuentaServiceImpl.cargarDesdeDisco() hace al
+        // reiniciar la JVM con transacciones ya persistidas: sin este
+        // avance, el contador estatico (que arranca en 1 en cada arranque)
+        // podria repetir un numero ya usado por una transaccion del .dat.
+        Transaccion.avanzarContador("TRX-999999");
+
+        Cuenta cuenta = new CuentaAhorros(crearClientePrueba(), new BigDecimal("100.00"));
+        Transaccion deposito = new Deposito(cuenta, new BigDecimal("50.00"));
+
+        long numero = Long.parseLong(deposito.getNumeroTransaccion().substring(4));
+        assertTrue(numero > 999999);
+    }
 }

@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 
 public class Deposito extends Transaccion {
 
-    private static final long serialVersionUID = 1L;
-
     private final Cuenta cuenta;
 
     public Deposito(Cuenta cuenta, BigDecimal monto) {

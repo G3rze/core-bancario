@@ -1,26 +1,64 @@
 package com.banco.core.model.entity;
 
-import java.io.Serializable;
+import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorColumn;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-public abstract class Cuenta implements Serializable {
+/**
+ * SINGLE_TABLE con discriminador `tipo_cuenta_clase` (nombre distinto de
+ * `tipoCuenta`, que ya es el getter del nombre para mostrar, p. ej.
+ * "Cuenta de Ahorros"): una sola tabla `cuentas` es mas simple que JOINED
+ * para el volumen de este avance academico, con columnas nullable para los
+ * campos que solo aplican a un subtipo (p. ej. plazoMeses en CuentaPlazoFijo).
+ */
+@Entity
+@Table(name = "cuentas")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "tipo_cuenta_clase")
+public abstract class Cuenta {
 
-    private static final long serialVersionUID = 1L;
-
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "numero_cuenta", nullable = false, unique = true, updatable = false)
     private final String numeroCuenta;
+
+    @ManyToOne
+    @JoinColumn(name = "cliente_id", nullable = false, updatable = false)
     private final Cliente titular;
 
     // No existe setSaldo(): el saldo solo cambia a traves de depositar()/
     // retirar() (o de las restricciones que cada subtipo les imponga), nunca
     // de forma directa desde fuera de la clase.
+    @Column(nullable = false)
     private BigDecimal saldo;
 
+    @Column(name = "monto_minimo_apertura", nullable = false, updatable = false)
     private final BigDecimal montoMinimoApertura;
+
+    @Column(name = "limite_retiro_diario", nullable = false, updatable = false)
     private final BigDecimal limiteRetiroDiario;
+
+    @Column(name = "fecha_apertura", nullable = false, updatable = false)
     private final LocalDateTime fechaApertura;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private EstadoCuenta estado;
 
     protected Cuenta(String numeroCuenta, Cliente titular, BigDecimal saldoInicial,
@@ -40,6 +78,15 @@ public abstract class Cuenta implements Serializable {
         this.limiteRetiroDiario = limiteRetiroDiario;
         this.fechaApertura = LocalDateTime.now();
         this.estado = EstadoCuenta.ACTIVA;
+    }
+
+    /** Constructor sin argumentos exigido por JPA; no usar directamente. */
+    protected Cuenta() {
+        this.numeroCuenta = null;
+        this.titular = null;
+        this.montoMinimoApertura = null;
+        this.limiteRetiroDiario = null;
+        this.fechaApertura = null;
     }
 
     public abstract BigDecimal calcularInteres();
