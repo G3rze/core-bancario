@@ -5,23 +5,19 @@ import { Cliente } from '../../models/usuario.model';
 // ClienteService que consuma el backend una vez exista el Controller/DTO.
 const CLIENTES_MOCK: Cliente[] = [
   {
-    id: 1,
     dui: '12345678-9',
     nombre: 'Ana Lopez',
     direccion: 'San Salvador',
     telefono: '7777-7777',
-    rol: 'CLIENTE',
     activo: true,
     numeroCliente: 'CLI-000001',
     tipo: 'NATURAL',
   },
   {
-    id: 2,
     dui: '98765432-1',
     nombre: 'Comercial El Roble S.A. de C.V.',
     direccion: 'Santa Ana',
     telefono: '2222-3333',
-    rol: 'CLIENTE',
     activo: true,
     numeroCliente: 'CLI-000002',
     tipo: 'JURIDICA',

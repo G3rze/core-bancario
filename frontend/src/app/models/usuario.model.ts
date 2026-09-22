@@ -1,23 +1,23 @@
-// Interfaces exploratorias que reflejan el dominio planeado en el backend
-// (com.banco.core.model.entity). Se ajustaran cuando existan los DTOs reales
-// expuestos por la API REST.
-
-export type RolUsuario = 'CLIENTE' | 'CAJERO' | 'GERENTE';
+// Cliente, alineado a com.banco.core.model.dto.ClienteDTO (backend). No hay
+// campo `rol` ni `id`: ClienteDTO no los expone (rol solo existe en
+// EmpleadoDTO, ver empleado.model.ts).
 
 export type TipoCliente = 'NATURAL' | 'JURIDICA';
 
-export interface Usuario {
-  id: number | null;
+export interface Cliente {
+  numeroCliente: string;
   dui: string;
   nombre: string;
   direccion: string;
   telefono: string;
-  rol: RolUsuario;
+  tipo: TipoCliente;
   activo: boolean;
 }
 
-export interface Cliente extends Usuario {
-  rol: 'CLIENTE';
-  numeroCliente: string;
+export interface NuevoClienteRequest {
+  dui: string;
+  nombre: string;
+  direccion: string;
+  telefono: string;
   tipo: TipoCliente;
 }
