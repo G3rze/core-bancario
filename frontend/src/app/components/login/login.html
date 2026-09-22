@@ -1,0 +1,29 @@
+<mat-card class="login">
+  <mat-card-header>
+    <mat-card-title>Ingreso de empleados</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <form (ngSubmit)="ingresar()">
+      <mat-form-field appearance="outline">
+        <mat-label>DUI</mat-label>
+        <input matInput name="dui" [(ngModel)]="dui" placeholder="00000000-0" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Contrasena</mat-label>
+        <input matInput type="password" name="password" [(ngModel)]="password" required />
+      </mat-form-field>
+
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
+      }
+
+      <mat-card-actions>
+        <button mat-flat-button color="primary" type="submit" [disabled]="cargando()">
+          {{ cargando() ? 'Ingresando...' : 'Ingresar' }}
+        </button>
+      </mat-card-actions>
+    </form>
+  </mat-card-content>
+</mat-card>

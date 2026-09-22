@@ -1,6 +1,40 @@
-<header>
-  <h1>Core Bancario Simplificado</h1>
-</header>
+<mat-toolbar color="primary">
+  <span class="titulo">Core Bancario Simplificado</span>
+
+  <span class="separador"></span>
+
+  <a mat-button routerLink="/clientes">
+    <mat-icon>people</mat-icon>
+    Clientes
+  </a>
+  <a mat-button routerLink="/clientes/nuevo">
+    <mat-icon>person_add</mat-icon>
+    Nuevo cliente
+  </a>
+
+  @if (auth.empleadoActual(); as empleado) {
+    <a mat-button routerLink="/ventanilla">
+      <mat-icon>storefront</mat-icon>
+      Ventanilla
+    </a>
+    @if (empleado.rol === 'GERENTE') {
+      <a mat-button routerLink="/empleados/nuevo">
+        <mat-icon>badge</mat-icon>
+        Nuevo empleado
+      </a>
+    }
+    <span class="sesion">{{ empleado.nombre }} ({{ empleado.rol }})</span>
+    <button mat-button (click)="salir()">
+      <mat-icon>logout</mat-icon>
+      Salir
+    </button>
+  } @else {
+    <a mat-button routerLink="/login">
+      <mat-icon>login</mat-icon>
+      Ingreso empleados
+    </a>
+  }
+</mat-toolbar>
 
 <main>
   <router-outlet />

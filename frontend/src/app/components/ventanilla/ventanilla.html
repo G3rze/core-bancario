@@ -1,0 +1,120 @@
+<section class="ventanilla">
+  <mat-card class="busqueda">
+    <mat-card-content>
+      <form (ngSubmit)="buscar()">
+        <mat-form-field appearance="outline">
+          <mat-label>Cliente (DUI o numero de cliente)</mat-label>
+          <input
+            matInput
+            name="identificador"
+            [(ngModel)]="identificador"
+            placeholder="00000000-0 o CLI-000001"
+            required
+          />
+        </mat-form-field>
+        <button mat-flat-button color="primary" type="submit" [disabled]="cargando()">
+          <mat-icon>search</mat-icon>
+          Buscar
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  @if (resultado(); as encontrado) {
+    <mat-card class="cliente">
+      <mat-card-header>
+        <mat-card-title>{{ encontrado.cliente.nombre }}</mat-card-title>
+        <mat-card-subtitle>
+          {{ encontrado.cliente.numeroCliente }} &middot; {{ encontrado.cliente.dui }} &middot;
+          {{ encontrado.cliente.tipo }}
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <table mat-table [dataSource]="encontrado.cuentas" class="mat-elevation-z1">
+          <ng-container matColumnDef="numeroCuenta">
+            <th mat-header-cell *matHeaderCellDef>Cuenta</th>
+            <td mat-cell *matCellDef="let cuenta">{{ cuenta.numeroCuenta }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="tipoCuenta">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let cuenta">{{ cuenta.tipoCuenta }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="saldo">
+            <th mat-header-cell *matHeaderCellDef>Saldo</th>
+            <td mat-cell *matCellDef="let cuenta">{{ cuenta.saldo | number: '1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let cuenta">{{ cuenta.estado }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let cuenta">
+              <button mat-button color="primary" type="button" (click)="seleccionarCuenta(cuenta)">Operar</button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columnasCuenta"></tr>
+          <tr
+            mat-row
+            *matRowDef="let cuenta; columns: columnasCuenta"
+            [class.seleccionada]="cuenta.numeroCuenta === cuentaSeleccionada()?.numeroCuenta"
+          ></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (cuentaSeleccionada(); as cuenta) {
+    <mat-card class="operacion">
+      <mat-card-header>
+        <mat-card-title>Cuenta {{ cuenta.numeroCuenta }}</mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-button-toggle-group [value]="operacion()" (change)="elegirOperacion($event.value)">
+          <mat-button-toggle value="DEPOSITO">Deposito</mat-button-toggle>
+          <mat-button-toggle value="RETIRO">Retiro</mat-button-toggle>
+          <mat-button-toggle value="TRANSFERENCIA">Transferencia</mat-button-toggle>
+        </mat-button-toggle-group>
+
+        @if (operacion(); as tipo) {
+          <form (ngSubmit)="confirmar()">
+            <mat-form-field appearance="outline">
+              <mat-label>Monto</mat-label>
+              <input matInput type="number" name="monto" [(ngModel)]="monto" min="0.01" step="0.01" required />
+            </mat-form-field>
+            @if (tipo === 'TRANSFERENCIA') {
+              <mat-form-field appearance="outline">
+                <mat-label>Cuenta destino</mat-label>
+                <input matInput type="text" name="destino" [(ngModel)]="numeroCuentaDestino" required />
+              </mat-form-field>
+            }
+            <div class="acciones-form">
+              <button mat-flat-button color="primary" type="submit" [disabled]="cargando()">Confirmar</button>
+            </div>
+          </form>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (comprobante(); as transaccion) {
+    <mat-card class="comprobante">
+      <mat-card-header>
+        <mat-card-title>Comprobante</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p>{{ transaccion.tipo }} {{ transaccion.numeroTransaccion }}</p>
+        <p>Monto: {{ transaccion.monto | number: '1.2-2' }}</p>
+        <p>Estado: {{ transaccion.estado }}</p>
+        <p>Cajero: {{ transaccion.codigoEmpleadoCajero }}</p>
+      </mat-card-content>
+    </mat-card>
+  }
+</section>
