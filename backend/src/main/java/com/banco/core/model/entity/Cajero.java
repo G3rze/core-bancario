@@ -1,14 +1,23 @@
 package com.banco.core.model.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("CAJERO")
 public class Cajero extends Empleado {
 
-    private static final long serialVersionUID = 1L;
-
+    @Column(name = "caja_asignada")
     private String cajaAsignada;
 
-    public Cajero(String dui, String nombre, String direccion, String telefono, String sucursal, String cajaAsignada) {
-        super(dui, nombre, direccion, telefono, sucursal);
+    public Cajero(String dui, String nombre, String direccion, String telefono, String sucursal,
+                  String cajaAsignada, String password) {
+        super(dui, nombre, direccion, telefono, sucursal, password);
         setCajaAsignada(cajaAsignada);
+    }
+
+    protected Cajero() {
     }
 
     public void setCajaAsignada(String cajaAsignada) {
