@@ -1,0 +1,43 @@
+<mat-card class="crear-cliente">
+  <mat-card-header>
+    <mat-card-title>Nuevo cliente</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <form (ngSubmit)="registrar()">
+      <mat-form-field appearance="outline">
+        <mat-label>DUI</mat-label>
+        <input matInput name="dui" [(ngModel)]="dui" placeholder="00000000-0" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre</mat-label>
+        <input matInput name="nombre" [(ngModel)]="nombre" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Direccion</mat-label>
+        <input matInput name="direccion" [(ngModel)]="direccion" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Telefono</mat-label>
+        <input matInput name="telefono" [(ngModel)]="telefono" placeholder="0000-0000" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de cliente</mat-label>
+        <mat-select name="tipo" [(ngModel)]="tipo" required>
+          <mat-option value="NATURAL">Persona natural</mat-option>
+          <mat-option value="JURIDICA">Persona juridica</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-card-actions>
+        <button mat-flat-button color="primary" type="submit" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando...' : 'Crear cliente' }}
+        </button>
+      </mat-card-actions>
+    </form>
+  </mat-card-content>
+</mat-card>

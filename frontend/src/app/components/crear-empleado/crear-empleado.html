@@ -1,0 +1,71 @@
+<mat-card class="crear-empleado">
+  <mat-card-header>
+    <mat-card-title>Nuevo empleado</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <form (ngSubmit)="registrar()">
+      <mat-form-field appearance="outline">
+        <mat-label>DUI</mat-label>
+        <input matInput name="dui" [(ngModel)]="dui" placeholder="00000000-0" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre</mat-label>
+        <input matInput name="nombre" [(ngModel)]="nombre" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Direccion</mat-label>
+        <input matInput name="direccion" [(ngModel)]="direccion" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Telefono</mat-label>
+        <input matInput name="telefono" [(ngModel)]="telefono" placeholder="0000-0000" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Sucursal</mat-label>
+        <input matInput name="sucursal" [(ngModel)]="sucursal" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Rol</mat-label>
+        <mat-select name="rol" [(ngModel)]="rol" required>
+          <mat-option value="CAJERO">Cajero</mat-option>
+          <mat-option value="GERENTE">Gerente</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      @if (rol === 'CAJERO') {
+        <mat-form-field appearance="outline">
+          <mat-label>Caja asignada</mat-label>
+          <input matInput name="cajaAsignada" [(ngModel)]="cajaAsignada" placeholder="CAJA-01" required />
+        </mat-form-field>
+      } @else {
+        <mat-form-field appearance="outline">
+          <mat-label>Monto maximo de aprobacion</mat-label>
+          <input
+            matInput
+            type="number"
+            name="montoMaximoAprobacion"
+            [(ngModel)]="montoMaximoAprobacion"
+            required
+          />
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Contrasena</mat-label>
+        <input matInput type="password" name="password" [(ngModel)]="password" required />
+      </mat-form-field>
+
+      <mat-card-actions>
+        <button mat-flat-button color="primary" type="submit" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando...' : 'Crear empleado' }}
+        </button>
+      </mat-card-actions>
+    </form>
+  </mat-card-content>
+</mat-card>
