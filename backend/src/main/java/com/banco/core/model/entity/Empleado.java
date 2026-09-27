@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * SINGLE_TABLE (a diferencia de Usuario, que es @MappedSuperclass): Cajero
  * y Gerente si se consultan juntos como "empleados" (login, busqueda por
  * codigo en ventanilla), asi que una sola tabla con discriminador es mas
- * simple que JOINED para el volumen de este avance academico.
+ * simple que JOINED.
  */
 @Entity
 @Table(name = "empleados")
