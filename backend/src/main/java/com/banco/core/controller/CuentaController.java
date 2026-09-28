@@ -3,6 +3,7 @@ package com.banco.core.controller;
 import com.banco.core.exception.CuentaNoEncontradaException;
 import com.banco.core.model.dto.AperturaCuentaRequest;
 import com.banco.core.model.dto.CuentaDTO;
+import com.banco.core.model.dto.HistorialResumenDTO;
 import com.banco.core.model.dto.MovimientoRequest;
 import com.banco.core.model.dto.TransaccionDTO;
 import com.banco.core.model.dto.TransferenciaRequest;
@@ -68,4 +69,10 @@ public class CuentaController {
     public List<TransaccionDTO> historial(@PathVariable String numeroCuenta) {
         return cuentaService.historial(numeroCuenta).stream().map(TransaccionDTO::desde).toList();
     }
+
+    @GetMapping("/{numeroCuenta}/transacciones/resumen")
+public HistorialResumenDTO resumen(@PathVariable String numeroCuenta) {
+    return ((com.banco.core.service.impl.CuentaServiceImpl) cuentaService)
+            .resumenHistorial(numeroCuenta);
+}
 }
