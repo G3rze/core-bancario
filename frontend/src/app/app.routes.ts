@@ -9,6 +9,7 @@ import { AperturaCuenta } from './components/apertura-cuenta/apertura-cuenta';
 import { Deposito } from './components/deposito/deposito';
 import { Retiro } from './components/retiro/retiro';
 import { Transferencia } from './components/transferencia/transferencia';
+import { Historial } from './components/historial/historial';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'clientes', pathMatch: 'full' },
@@ -21,4 +22,5 @@ export const routes: Routes = [
   { path: 'cuentas/deposito', component: Deposito },
   { path: 'cuentas/retiro', component: Retiro },
   { path: 'cuentas/transferencia', component: Transferencia },
+  { path: 'cuentas/historial', component: Historial },
 ];
