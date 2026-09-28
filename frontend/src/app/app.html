@@ -11,6 +11,10 @@
     <mat-icon>person_add</mat-icon>
     Nuevo cliente
   </a>
+  <a mat-button routerLink="/cuentas/nueva">
+  <mat-icon>account_balance</mat-icon>
+  Nueva cuenta
+</a>
 
   @if (auth.empleadoActual(); as empleado) {
     <a mat-button routerLink="/ventanilla">

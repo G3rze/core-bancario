@@ -5,6 +5,8 @@ import { CrearEmpleado } from './components/crear-empleado/crear-empleado';
 import { Login } from './components/login/login';
 import { Ventanilla } from './components/ventanilla/ventanilla';
 import { rolGuard } from './guards/rol.guard';
+import { AperturaCuenta } from './components/apertura-cuenta/apertura-cuenta';
+import { Deposito } from './components/deposito/deposito';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'clientes', pathMatch: 'full' },
@@ -13,4 +15,6 @@ export const routes: Routes = [
   { path: 'login', component: Login },
   { path: 'ventanilla', component: Ventanilla, canActivate: [rolGuard(['CAJERO', 'GERENTE'])] },
   { path: 'empleados/nuevo', component: CrearEmpleado, canActivate: [rolGuard(['GERENTE'])] },
+  { path: 'cuentas/nueva', component: AperturaCuenta },
+  { path: 'cuentas/deposito', component: Deposito },
 ];
