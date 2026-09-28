@@ -3,62 +3,88 @@
 
   <span class="separador"></span>
 
-  <a mat-button routerLink="/clientes">
-    <mat-icon>people</mat-icon>
+  <a mat-button routerLink="/clientes" aria-label="Listado de clientes">
+    <mat-icon aria-label="Clientes">people</mat-icon>
     Clientes
   </a>
-  <a mat-button routerLink="/clientes/nuevo">
-    <mat-icon>person_add</mat-icon>
+
+  <a mat-button routerLink="/clientes/nuevo" aria-label="Crear nuevo cliente">
+    <mat-icon aria-label="Nuevo cliente">person_add</mat-icon>
     Nuevo cliente
   </a>
-  
-  <a mat-button routerLink="/cuentas/nueva">
-  <mat-icon>account_balance</mat-icon>
-  Nueva cuenta
+
+  <a mat-button routerLink="/cuentas/nueva" aria-label="Abrir nueva cuenta">
+    <mat-icon aria-label="Nueva cuenta">account_balance</mat-icon>
+    Nueva cuenta
   </a>
 
-<a mat-button routerLink="/cuentas/deposito">
-  <mat-icon>savings</mat-icon>
-  Deposito
+  <a mat-button routerLink="/cuentas/deposito" aria-label="Realizar deposito">
+    <mat-icon aria-label="Deposito">savings</mat-icon>
+    Deposito
   </a>
 
-<a mat-button routerLink="/cuentas/retiro">
-  <mat-icon>payments</mat-icon>
-  Retiro
+  <a mat-button routerLink="/cuentas/retiro" aria-label="Realizar retiro">
+    <mat-icon aria-label="Retiro">payments</mat-icon>
+    Retiro
   </a>
 
-<a mat-button routerLink="/cuentas/transferencia">
-  <mat-icon>swap_horiz</mat-icon>
-  Transferencia
+  <a mat-button routerLink="/cuentas/transferencia" aria-label="Realizar transferencia">
+    <mat-icon aria-label="Transferencia">swap_horiz</mat-icon>
+    Transferencia
   </a>
 
-<a mat-button routerLink="/cuentas/historial">
-  <mat-icon>history</mat-icon>
-  Historial
+  <a mat-button routerLink="/cuentas/historial" aria-label="Ver historial">
+    <mat-icon aria-label="Historial">history</mat-icon>
+    Historial
   </a>
 
   @if (auth.empleadoActual(); as empleado) {
-    <a mat-button routerLink="/ventanilla">
-      <mat-icon>storefront</mat-icon>
+
+    <a mat-button routerLink="/ventanilla" aria-label="Modulo de ventanilla">
+      <mat-icon aria-label="Ventanilla">storefront</mat-icon>
       Ventanilla
     </a>
+
     @if (empleado.rol === 'GERENTE') {
-      <a mat-button routerLink="/empleados/nuevo">
-        <mat-icon>badge</mat-icon>
+      <a
+        mat-button
+        routerLink="/empleados/nuevo"
+        aria-label="Crear nuevo empleado">
+
+        <mat-icon aria-label="Nuevo empleado">badge</mat-icon>
         Nuevo empleado
+
       </a>
     }
-    <span class="sesion">{{ empleado.nombre }} ({{ empleado.rol }})</span>
-    <button mat-button (click)="salir()">
-      <mat-icon>logout</mat-icon>
+
+    <span class="sesion">
+      {{ empleado.nombre }} ({{ empleado.rol }})
+    </span>
+
+    <button
+      mat-button
+      (click)="salir()"
+      aria-label="Cerrar sesion">
+
+      <mat-icon aria-label="Cerrar sesion">logout</mat-icon>
       Salir
+
     </button>
+
   } @else {
-    <a mat-button routerLink="/login">
-      <mat-icon>login</mat-icon>
+
+    <a
+      mat-button
+      routerLink="/login"
+      aria-label="Ingreso de empleados">
+
+      <mat-icon aria-label="Ingreso">login</mat-icon>
       Ingreso empleados
+
     </a>
+
   }
+
 </mat-toolbar>
 
 <main>
