@@ -1,6 +1,5 @@
 package com.banco.core.model.entity;
 
-import com.banco.core.util.PasswordHasher;
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.Entity;
@@ -24,7 +23,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public abstract class Empleado extends Usuario {
 
     private static final AtomicLong CONTADOR_EMPLEADOS = new AtomicLong(1);
-    private static final int LARGO_MINIMO_PASSWORD = 6;
 
     @Column(name = "codigo_empleado", nullable = false, unique = true, updatable = false)
     private final String codigoEmpleado;
@@ -35,18 +33,13 @@ public abstract class Empleado extends Usuario {
     @Column(name = "fecha_contratacion", nullable = false, updatable = false)
     private final LocalDate fechaContratacion;
 
-    @Column(name = "password_hash", nullable = false)
-    private final String passwordHash;
-
     protected Empleado(String dui, String nombre, String direccion, String telefono, String sucursal,
-                        String password) {
+                        String passwordHash) {
         super(dui, nombre, direccion, telefono);
         setSucursal(sucursal);
-        if (password == null || password.length() < LARGO_MINIMO_PASSWORD) {
-            throw new IllegalArgumentException(
-                    "La contrasena debe tener al menos " + LARGO_MINIMO_PASSWORD + " caracteres");
-        }
-        this.passwordHash = PasswordHasher.hash(password);
+        // Recibe el hash BCrypt ya calculado; la politica de largo y el
+        // hashing viven en el servicio (ver util/PoliticaPassword).
+        setPasswordHash(passwordHash);
         this.codigoEmpleado = "EMP-%06d".formatted(CONTADOR_EMPLEADOS.getAndIncrement());
         this.fechaContratacion = LocalDate.now();
     }
@@ -54,14 +47,9 @@ public abstract class Empleado extends Usuario {
     protected Empleado() {
         this.codigoEmpleado = null;
         this.fechaContratacion = null;
-        this.passwordHash = null;
     }
 
     public abstract String getNivelAutorizacion();
-
-    public boolean validarPassword(String intento) {
-        return intento != null && PasswordHasher.verificar(intento, passwordHash);
-    }
 
     /**
      * Ver Cliente.avanzarContador(): mismo problema (el contador de

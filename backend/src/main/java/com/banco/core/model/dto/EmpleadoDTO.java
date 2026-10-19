@@ -15,7 +15,7 @@ public record EmpleadoDTO(
                 empleado.getCodigoEmpleado(),
                 empleado.getDui(),
                 empleado.getNombre(),
-                empleado.getRol(),
+                empleado.getRol().name(),
                 empleado.getSucursal(),
                 empleado.getNivelAutorizacion());
     }

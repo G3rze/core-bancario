@@ -20,4 +20,7 @@ public interface EmpleadoRepository extends JpaRepository<Empleado, Long> {
     // soporte una expresion booleana en el SELECT.
     @Query("SELECT COUNT(g) FROM Gerente g")
     long contarGerentes();
+
+    @Query("SELECT COUNT(a) FROM Administrador a")
+    long contarAdministradores();
 }

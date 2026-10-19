@@ -51,7 +51,7 @@ public class UsuarioDetailsService implements UserDetailsService, CargadorDeIden
     public UserDetails cargar(String dui, String rol) throws UsernameNotFoundException {
         Optional<Usuario> usuario = ROL_CLIENTE.equals(rol) ? buscarCliente(dui) : buscarEmpleado(dui);
         return usuario
-                .filter(u -> u.getRol().equals(rol))
+                .filter(u -> u.getRol().name().equals(rol))
                 .map(this::aUserDetails)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + dui));
     }
