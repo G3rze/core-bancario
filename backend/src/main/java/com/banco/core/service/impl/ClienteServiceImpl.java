@@ -4,6 +4,7 @@ import com.banco.core.dao.ClienteRepository;
 import com.banco.core.model.entity.Cliente;
 import com.banco.core.model.entity.TipoCliente;
 import com.banco.core.service.ClienteService;
+import com.banco.core.util.PoliticaPassword;
 import jakarta.annotation.PostConstruct;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,7 +45,22 @@ public class ClienteServiceImpl implements ClienteService {
     @Override
     @Transactional
     public Cliente registrar(String dui, String nombre, String direccion, String telefono, TipoCliente tipo) {
+        return guardar(new Cliente(dui, nombre, direccion, telefono, tipo));
+    }
+
+    @Override
+    @Transactional
+    public Cliente registrar(String dui, String nombre, String direccion, String telefono, TipoCliente tipo,
+                             String password) {
+        // Politica sobre el texto plano antes de codificar (la entidad solo ve el hash).
+        PoliticaPassword.validar(password);
         Cliente cliente = new Cliente(dui, nombre, direccion, telefono, tipo);
+        cliente.setPasswordHash(passwordEncoder.encode(password));
+        return guardar(cliente);
+    }
+
+    private Cliente guardar(Cliente cliente) {
+        String dui = cliente.getDui();
         try {
             return clienteRepository.save(cliente);
         } catch (DataIntegrityViolationException e) {
