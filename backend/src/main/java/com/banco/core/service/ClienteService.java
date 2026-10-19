@@ -19,4 +19,7 @@ public interface ClienteService {
     Optional<Cliente> buscarPorDui(String dui);
 
     List<Cliente> listarTodos();
+
+    /** Cliente cuyo DUI y contrasena coinciden; vacio si no existe o la clave no corresponde. */
+    Optional<Cliente> autenticar(String dui, String password);
 }

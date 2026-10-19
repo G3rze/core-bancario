@@ -6,6 +6,7 @@ import com.banco.core.model.entity.TipoCliente;
 import com.banco.core.service.ClienteService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +26,11 @@ public class ClienteServiceImpl implements ClienteService {
 
     private final ClienteRepository clienteRepository;
 
-    public ClienteServiceImpl(ClienteRepository clienteRepository) {
+    private final PasswordEncoder passwordEncoder;
+
+    public ClienteServiceImpl(ClienteRepository clienteRepository, PasswordEncoder passwordEncoder) {
         this.clienteRepository = clienteRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostConstruct
@@ -61,6 +65,12 @@ public class ClienteServiceImpl implements ClienteService {
         return clienteRepository.findAll().stream()
                 .sorted(Comparator.comparing(Cliente::getNumeroCliente))
                 .toList();
+    }
+
+    @Override
+    public Optional<Cliente> autenticar(String dui, String password) {
+        return clienteRepository.findByDui(dui)
+                .filter(cliente -> cliente.validarPassword(password, passwordEncoder));
     }
 
     public Optional<Cliente> buscarPorNumeroCliente(String numeroCliente) {
