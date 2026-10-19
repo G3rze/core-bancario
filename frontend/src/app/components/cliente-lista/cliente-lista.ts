@@ -1,35 +1,41 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Cliente } from '../../models/usuario.model';
-
-// Datos de ejemplo mientras no existe la API real. Se reemplazaran por un
-// ClienteService que consuma el backend una vez exista el Controller/DTO.
-const CLIENTES_MOCK: Cliente[] = [
-  {
-    dui: '12345678-9',
-    nombre: 'Ana Lopez',
-    direccion: 'San Salvador',
-    telefono: '7777-7777',
-    activo: true,
-    numeroCliente: 'CLI-000001',
-    tipo: 'NATURAL',
-  },
-  {
-    dui: '98765432-1',
-    nombre: 'Comercial El Roble S.A. de C.V.',
-    direccion: 'Santa Ana',
-    telefono: '2222-3333',
-    activo: true,
-    numeroCliente: 'CLI-000002',
-    tipo: 'JURIDICA',
-  },
-];
+import { ClienteService } from '../../services/cliente.service';
 
 @Component({
   selector: 'app-cliente-lista',
+  standalone: true,
   imports: [],
   templateUrl: './cliente-lista.html',
   styleUrl: './cliente-lista.scss',
 })
-export class ClienteLista {
-  protected readonly clientes = CLIENTES_MOCK;
+export class ClienteLista implements OnInit {
+
+  private readonly clienteService = inject(ClienteService);
+
+  protected clientes: Cliente[] = [];
+  protected cargando = false;
+  protected error = '';
+
+  ngOnInit(): void {
+    this.cargarClientes();
+  }
+
+  private cargarClientes(): void {
+
+    this.cargando = true;
+    this.error = '';
+
+    this.clienteService.listarTodos().subscribe({
+      next: (clientes) => {
+        this.clientes = clientes;
+        this.cargando = false;
+      },
+      error: () => {
+        this.error = 'No fue posible cargar los clientes';
+        this.cargando = false;
+      },
+    });
+  }
 }
+``

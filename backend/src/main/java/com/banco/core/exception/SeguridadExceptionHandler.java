@@ -1,30 +1,39 @@
 package com.banco.core.exception;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * TODO: centralizar aqui los errores de autenticacion y
- * autorizacion de empleados (login, alta de empleados, ventanilla) —
- * separado de NegocioExceptionHandler (que cubre Cliente/Cuenta/
- * Transaccion) para no mezclar los dos dominios en un mismo
- * @RestControllerAdvice.
- * <p>
- * Agregar un metodo {@code @ExceptionHandler} por cada una de estas (mismo
- * patron que NegocioExceptionHandler:
- * {@code ResponseEntity.status(...).body(Map.of("error", ex.getMessage()))}):
- * <ul>
- *   <li>{@code CredencialesInvalidasException} -&gt; 401 UNAUTHORIZED
- *       (login con dui/password incorrectos).
- *   <li>{@code AccesoNoAutorizadoException} -&gt; 403 FORBIDDEN (crear
- *       empleado sin ser Gerente).
- *   <li>{@code EmpleadoNoEncontradoException} -&gt; 404 NOT_FOUND (codigo
- *       de cajero que no existe, en ventanilla).
- * </ul>
- * Mientras esto quede vacio, esas tres excepciones caen en el manejo por
- * defecto de Spring (500) en vez del status HTTP correcto — no rompe nada
- * que ya funcione, porque los controllers que las lanzan (AuthController,
- * EmpleadoController, VentanillaController) todavia estan en TODO tambien.
- */
+import java.util.Map;
+
 @RestControllerAdvice
 public class SeguridadExceptionHandler {
+
+    @ExceptionHandler(CredencialesInvalidasException.class)
+    public ResponseEntity<Map<String, String>> manejarCredencialesInvalidas(
+            CredencialesInvalidasException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccesoNoAutorizadoException.class)
+    public ResponseEntity<Map<String, String>> manejarAccesoNoAutorizado(
+            AccesoNoAutorizadoException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmpleadoNoEncontradoException.class)
+    public ResponseEntity<Map<String, String>> manejarEmpleadoNoEncontrado(
+            EmpleadoNoEncontradoException ex) {
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
 }

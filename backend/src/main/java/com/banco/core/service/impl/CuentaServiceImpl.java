@@ -32,6 +32,8 @@ import java.util.Queue;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.time.LocalDate;
+import com.banco.core.model.dto.HistorialResumenDTO;
 
 @Service
 public class CuentaServiceImpl implements CuentaService {
@@ -58,6 +60,10 @@ public class CuentaServiceImpl implements CuentaService {
     // orden estricto de entrada/salida es justo lo que Queue garantiza y
     // List/Set no.
     private final Queue<Notificacion> notificaciones = new ConcurrentLinkedQueue<>();
+
+    // HU-004 / HU-005
+private final Map<String, BigDecimal> acumuladoDiario = new ConcurrentHashMap<>();
+private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
 
     public CuentaServiceImpl(CuentaRepository cuentaRepository, ClienteRepository clienteRepository,
                               TransaccionDAO transaccionDAO) {
@@ -167,15 +173,23 @@ public class CuentaServiceImpl implements CuentaService {
     }
 
     private RegistroTransaccion retirar(String numeroCuenta, BigDecimal monto, Cajero cajero) {
-        Cuenta cuenta = obtenerCuenta(numeroCuenta);
-        Transaccion transaccion = new Retiro(cuenta, monto);
-        transaccion.setCajero(cajero);
-        synchronized (cuenta) {
-            transaccion.ejecutar();
-            cuentaRepository.save(cuenta);
-        }
-        return persistirTransaccion(transaccion);
+    Cuenta cuenta = obtenerCuenta(numeroCuenta);
+    Transaccion transaccion = new Retiro(cuenta, monto);
+    transaccion.setCajero(cajero);
+
+    synchronized (cuenta) {
+
+        validarLimiteDiario(cuenta, monto);
+
+        transaccion.ejecutar();
+
+        registrarMovimientoDiario(cuenta, monto);
+
+        cuentaRepository.save(cuenta);
     }
+
+    return persistirTransaccion(transaccion);
+}
 
     @Override
     @Transactional
@@ -202,12 +216,18 @@ public class CuentaServiceImpl implements CuentaService {
         Cuenta primero = origen.getNumeroCuenta().compareTo(destino.getNumeroCuenta()) <= 0 ? origen : destino;
         Cuenta segundo = primero == origen ? destino : origen;
         synchronized (primero) {
-            synchronized (segundo) {
-                transaccion.ejecutar();
-                cuentaRepository.save(origen);
-                cuentaRepository.save(destino);
-            }
-        }
+    synchronized (segundo) {
+
+        validarLimiteDiario(origen, monto);
+
+        transaccion.ejecutar();
+
+        registrarMovimientoDiario(origen, monto);
+
+        cuentaRepository.save(origen);
+        cuentaRepository.save(destino);
+    }
+}
         return persistirTransaccion(transaccion);
     }
 
@@ -230,16 +250,56 @@ public class CuentaServiceImpl implements CuentaService {
     }
 
     @Override
-    public List<RegistroTransaccion> historial(String numeroCuenta) {
-        obtenerCuenta(numeroCuenta); // valida que la cuenta exista (404 si no)
-        TreeSet<RegistroTransaccion> historial = historialPorCuenta.get(numeroCuenta);
-        if (historial == null) {
-            return List.of();
-        }
-        synchronized (historial) {
-            return List.copyOf(historial);
-        }
+public List<RegistroTransaccion> historial(String numeroCuenta) {
+    obtenerCuenta(numeroCuenta);
+
+    TreeSet<RegistroTransaccion> historial =
+            historialPorCuenta.get(numeroCuenta);
+
+    if (historial == null) {
+        return List.of();
     }
+
+    synchronized (historial) {
+        return List.copyOf(historial);
+    }
+}
+
+public List<RegistroTransaccion> historialFiltrado(
+        String numeroCuenta,
+        String tipo) {
+
+    return historial(numeroCuenta)
+            .stream()
+            .filter(registro ->
+                    tipo == null
+                            || tipo.isBlank()
+                            || registro.getTipo().equalsIgnoreCase(tipo))
+            .toList();
+}
+
+public HistorialResumenDTO resumenHistorial(String numeroCuenta) {
+
+    List<RegistroTransaccion> movimientos = historial(numeroCuenta);
+
+    BigDecimal ingresos = movimientos.stream()
+            .filter(registro ->
+                    "Deposito".equalsIgnoreCase(registro.getTipo()))
+            .map(RegistroTransaccion::getMonto)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    BigDecimal egresos = movimientos.stream()
+            .filter(registro ->
+                    "Retiro".equalsIgnoreCase(registro.getTipo())
+                            || "Transferencia".equalsIgnoreCase(registro.getTipo()))
+            .map(RegistroTransaccion::getMonto)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    return new HistorialResumenDTO(
+            ingresos,
+            egresos
+    );
+}
 
     private Cuenta obtenerCuenta(String numeroCuenta) {
         return buscarPorNumero(numeroCuenta)
@@ -252,6 +312,45 @@ public class CuentaServiceImpl implements CuentaService {
         }
         return cajero;
     }
+    
+    private void validarLimiteDiario(Cuenta cuenta, BigDecimal monto) {
+
+    LocalDate hoy = LocalDate.now();
+    String numeroCuenta = cuenta.getNumeroCuenta();
+
+    LocalDate ultimaFecha = fechaAcumulado.get(numeroCuenta);
+
+    if (ultimaFecha == null || !ultimaFecha.equals(hoy)) {
+        fechaAcumulado.put(numeroCuenta, hoy);
+        acumuladoDiario.put(numeroCuenta, BigDecimal.ZERO);
+    }
+
+    BigDecimal acumuladoActual =
+            acumuladoDiario.getOrDefault(numeroCuenta, BigDecimal.ZERO);
+
+    BigDecimal nuevoAcumulado = acumuladoActual.add(monto);
+
+    if (nuevoAcumulado.compareTo(cuenta.getLimiteRetiroDiario()) > 0) {
+        throw new IllegalArgumentException(
+                "La operacion excede el limite diario permitido");
+    }
+}
+
+private void registrarMovimientoDiario(Cuenta cuenta, BigDecimal monto) {
+
+    String numeroCuenta = cuenta.getNumeroCuenta();
+
+    acumuladoDiario.merge(
+            numeroCuenta,
+            monto,
+            BigDecimal::add
+    );
+
+    fechaAcumulado.put(
+            numeroCuenta,
+            LocalDate.now()
+    );
+}
 
     /**
      * Capitaliza el interes periodico de las cuentas de ahorro. Es la unica

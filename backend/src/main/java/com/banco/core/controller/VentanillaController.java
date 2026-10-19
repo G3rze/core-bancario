@@ -1,46 +1,20 @@
 package com.banco.core.controller;
 
+import com.banco.core.exception.ClienteNoEncontradoException;
+import com.banco.core.exception.EmpleadoNoEncontradoException;
 import com.banco.core.model.dto.ClienteConCuentasDTO;
+import com.banco.core.model.dto.ClienteDTO;
+import com.banco.core.model.dto.CuentaDTO;
 import com.banco.core.model.dto.TransaccionDTO;
 import com.banco.core.model.dto.VentanillaMovimientoRequest;
 import com.banco.core.model.dto.VentanillaTransferenciaRequest;
+import com.banco.core.model.entity.Cajero;
+import com.banco.core.model.entity.Empleado;
 import com.banco.core.service.EmpleadoService;
 import com.banco.core.service.impl.ClienteServiceImpl;
 import com.banco.core.service.impl.CuentaServiceImpl;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-/**
- * Flujo de caja/ventanilla (HU-007): busqueda de cliente por numero o DUI,
- * sus cuentas, y las transacciones que un Cajero procesa a nombre de un
- * cliente -a diferencia de CuentaController, que es el cliente operando su
- * propia cuenta por banca en linea (sin cajero asociado)-.
- * <p>
- * TODO: implementar los 4 endpoints. Ya estan todos los
- * metodos que hacen falta del lado de los services inyectados abajo, esto
- * es orquestacion, no logica nueva:
- * <ul>
- *   <li>{@code clienteService.buscarPorDuiONumeroCliente(identificador)} ->
- *       si no esta, {@code ClienteNoEncontradoException.porDui(identificador)}.
- *   <li>{@code cuentaService.listarPorCliente(cliente.getDui())} + mapear
- *       cada Cuenta con {@code CuentaDTO.desde(...)} para armar el
- *       {@code ClienteConCuentasDTO} junto con {@code ClienteDTO.desde(cliente)}.
- *   <li>{@code cuentaService.depositarEnVentanilla/retirarEnVentanilla/
- *       transferirEnVentanilla(..., cajero)} -> envolver el resultado con
- *       {@code TransaccionDTO.desde(...)}.
- *   <li>Resolver el Cajero a partir de {@code request.codigoEmpleadoCajero()}
- *       con {@code empleadoService.buscarPorCodigo(...)} (si no esta,
- *       {@code EmpleadoNoEncontradoException.porCodigo(...)}), y validar
- *       que sea {@code instanceof Cajero} (si no, IllegalArgumentException).
- * </ul>
- * Mirar CuentaController para el patron de los otros 3 endpoints
- * (deposito/retiro/transferencia) que ya estan resueltos ahi, solo sin
- * cajero de por medio.
- */
 @RestController
 @RequestMapping("/api/ventanilla")
 public class VentanillaController {
@@ -49,8 +23,11 @@ public class VentanillaController {
     private final CuentaServiceImpl cuentaService;
     private final EmpleadoService empleadoService;
 
-    public VentanillaController(ClienteServiceImpl clienteService, CuentaServiceImpl cuentaService,
-                                 EmpleadoService empleadoService) {
+    public VentanillaController(
+            ClienteServiceImpl clienteService,
+            CuentaServiceImpl cuentaService,
+            EmpleadoService empleadoService) {
+
         this.clienteService = clienteService;
         this.cuentaService = cuentaService;
         this.empleadoService = empleadoService;
@@ -58,24 +35,84 @@ public class VentanillaController {
 
     @GetMapping("/clientes/{identificador}")
     public ClienteConCuentasDTO buscarCliente(@PathVariable String identificador) {
-        throw new UnsupportedOperationException("TODO: ver comentario de la clase");
+
+        var cliente = clienteService
+                .buscarPorDuiONumeroCliente(identificador)
+                .orElseThrow(() ->
+                        ClienteNoEncontradoException.porDui(identificador));
+
+        var cuentas = cuentaService.listarPorCliente(cliente.getDui())
+                .stream()
+                .map(CuentaDTO::desde)
+                .toList();
+
+        return new ClienteConCuentasDTO(
+                ClienteDTO.desde(cliente),
+                cuentas
+        );
     }
 
     @PostMapping("/cuentas/{numeroCuenta}/depositos")
-    public TransaccionDTO depositar(@PathVariable String numeroCuenta,
-                                     @RequestBody VentanillaMovimientoRequest request) {
-        throw new UnsupportedOperationException("TODO: ver comentario de la clase");
+    public TransaccionDTO depositar(
+            @PathVariable String numeroCuenta,
+            @RequestBody VentanillaMovimientoRequest request) {
+
+        Cajero cajero = resolverCajero(request.codigoEmpleadoCajero());
+
+        return TransaccionDTO.desde(
+                cuentaService.depositarEnVentanilla(
+                        numeroCuenta,
+                        request.monto(),
+                        cajero
+                )
+        );
     }
 
     @PostMapping("/cuentas/{numeroCuenta}/retiros")
-    public TransaccionDTO retirar(@PathVariable String numeroCuenta,
-                                   @RequestBody VentanillaMovimientoRequest request) {
-        throw new UnsupportedOperationException("TODO: ver comentario de la clase");
+    public TransaccionDTO retirar(
+            @PathVariable String numeroCuenta,
+            @RequestBody VentanillaMovimientoRequest request) {
+
+        Cajero cajero = resolverCajero(request.codigoEmpleadoCajero());
+
+        return TransaccionDTO.desde(
+                cuentaService.retirarEnVentanilla(
+                        numeroCuenta,
+                        request.monto(),
+                        cajero
+                )
+        );
     }
 
     @PostMapping("/cuentas/{numeroCuenta}/transferencias")
-    public TransaccionDTO transferir(@PathVariable String numeroCuenta,
-                                      @RequestBody VentanillaTransferenciaRequest request) {
-        throw new UnsupportedOperationException("TODO: ver comentario de la clase");
+    public TransaccionDTO transferir(
+            @PathVariable String numeroCuenta,
+            @RequestBody VentanillaTransferenciaRequest request) {
+
+        Cajero cajero = resolverCajero(request.codigoEmpleadoCajero());
+
+        return TransaccionDTO.desde(
+                cuentaService.transferirEnVentanilla(
+                        numeroCuenta,
+                        request.numeroCuentaDestino(),
+                        request.monto(),
+                        cajero
+                )
+        );
+    }
+
+    private Cajero resolverCajero(String codigoEmpleado) {
+
+        Empleado empleado = empleadoService
+                .buscarPorCodigo(codigoEmpleado)
+                .orElseThrow(() ->
+                        EmpleadoNoEncontradoException.porCodigo(codigoEmpleado));
+
+        if (!(empleado instanceof Cajero cajero)) {
+            throw new IllegalArgumentException(
+                    "El empleado indicado no es un cajero");
+        }
+
+        return cajero;
     }
 }

@@ -1,0 +1,76 @@
+<mat-card>
+
+  <mat-card-header>
+    <mat-card-title>Historial de Transacciones</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Número de cuenta</mat-label>
+      <input matInput [(ngModel)]="numeroCuenta">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo</mat-label>
+
+      <mat-select [(ngModel)]="tipoFiltro">
+
+        <mat-option value="">
+          Todas
+        </mat-option>
+
+        <mat-option value="Deposito">
+          Depósito
+        </mat-option>
+
+        <mat-option value="Retiro">
+          Retiro
+        </mat-option>
+
+        <mat-option value="Transferencia">
+          Transferencia
+        </mat-option>
+
+      </mat-select>
+
+    </mat-form-field>
+
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="buscar()">
+
+      Buscar
+
+    </button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Transacción</th>
+          <th>Tipo</th>
+          <th>Monto</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        @for (trx of transacciones; track trx.numeroTransaccion) {
+
+          <tr>
+            <td>{{ trx.numeroTransaccion }}</td>
+            <td>{{ trx.tipo }}</td>
+            <td>{{ trx.monto }}</td>
+            <td>{{ trx.estado }}</td>
+          </tr>
+
+        }
+
+      </tbody>
+    </table>
+
+  </mat-card-content>
+
+</mat-card>

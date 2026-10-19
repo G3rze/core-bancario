@@ -1,8 +1,12 @@
 package com.banco.core.controller;
 
+import com.banco.core.exception.AccesoNoAutorizadoException;
 import com.banco.core.model.dto.EmpleadoDTO;
 import com.banco.core.model.dto.NuevoEmpleadoRequest;
+import com.banco.core.model.entity.Empleado;
+import com.banco.core.model.entity.Gerente;
 import com.banco.core.service.EmpleadoService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,35 +24,60 @@ public class EmpleadoController {
         this.empleadoService = empleadoService;
     }
 
-    /**
-     * TODO: dar de alta un Cajero o Gerente segun
-     * request.rol(), restringido a que lo pida un Gerente ya registrado.
-     * <p>
-     * 1. Segun request.rol(): "CAJERO" -&gt; empleadoService.registrarCajero(...);
-     *    "GERENTE" -&gt; empleadoService.registrarGerente(...); cualquier otro
-     *    valor (o null) -&gt; IllegalArgumentException (-&gt; 400, ya manejado
-     *    por NegocioExceptionHandler).
-     * 2. Antes de crear el empleado, verificar autorizacion con el header
-     *    "X-Codigo-Empleado" (ya viene como parametro aqui abajo):
-     *      - Si empleadoService.existeAlgunGerente() es false, no hay
-     *        restriccion todavia (bootstrap: el primer Gerente se crea
-     *        libre, si no nadie podria crearlo nunca).
-     *      - Si ya existe algun Gerente, el codigo del header debe
-     *        resolver (empleadoService.buscarPorCodigo(...)) a un Gerente
-     *        (instanceof Gerente); si no, lanzar
-     *        AccesoNoAutorizadoException (-&gt; 403, ver el TODO en
-     *        SeguridadExceptionHandler para agregar el @ExceptionHandler
-     *        que le da ese status).
-     * 3. Devolver 201 con EmpleadoDTO.desde(empleado).
-     * <p>
-     * Casos a cubrir en el test (WebMvcTest mockeando EmpleadoService):
-     * sin Gerentes aun / sin header habiendo ya un Gerente / con header de
-     * un Cajero / con header de un Gerente valido.
-     */
     @PostMapping
-    public ResponseEntity<EmpleadoDTO> registrar(@RequestBody NuevoEmpleadoRequest request,
-                                                  @RequestHeader(value = "X-Codigo-Empleado", required = false)
-                                                  String codigoSolicitante) {
-        throw new UnsupportedOperationException("TODO: registrar empleado, ver comentario arriba");
+    public ResponseEntity<EmpleadoDTO> registrar(
+            @RequestBody NuevoEmpleadoRequest request,
+            @RequestHeader(value = "X-Codigo-Empleado", required = false)
+            String codigoSolicitante) {
+
+        if (empleadoService.existeAlgunGerente()) {
+
+            Empleado solicitante = empleadoService
+                    .buscarPorCodigo(codigoSolicitante)
+                    .orElseThrow(() ->
+                            new AccesoNoAutorizadoException(
+                                    "Solo un gerente puede registrar empleados"));
+
+            if (!(solicitante instanceof Gerente)) {
+                throw new AccesoNoAutorizadoException(
+                        "Solo un gerente puede registrar empleados");
+            }
+        }
+
+        Empleado empleado;
+
+        if ("CAJERO".equalsIgnoreCase(request.rol())) {
+
+            empleado = empleadoService.registrarCajero(
+                    request.dui(),
+                    request.nombre(),
+                    request.direccion(),
+                    request.telefono(),
+                    request.sucursal(),
+                    request.cajaAsignada(),
+                    request.password()
+            );
+
+        } else if ("GERENTE".equalsIgnoreCase(request.rol())) {
+
+            empleado = empleadoService.registrarGerente(
+                    request.dui(),
+                    request.nombre(),
+                    request.direccion(),
+                    request.telefono(),
+                    request.sucursal(),
+                    request.montoMaximoAprobacion(),
+                    request.password()
+            );
+
+        } else {
+
+            throw new IllegalArgumentException(
+                    "Rol de empleado invalido: " + request.rol());
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(EmpleadoDTO.desde(empleado));
     }
 }
