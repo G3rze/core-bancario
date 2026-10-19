@@ -8,6 +8,7 @@ import com.banco.core.model.entity.TipoCliente;
 import com.banco.core.service.CuentaService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -23,7 +24,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Estos tests cubren solo la delegacion al service; la seguridad (401/403) se
+// prueba aparte (SeguridadEndpointsTest), por eso se desactivan los filtros aqui.
 @WebMvcTest(CuentaController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class CuentaControllerTest {
 
     @Autowired
