@@ -23,8 +23,8 @@ import java.io.IOException;
  * (con su AuthenticationEntryPoint) decide el rechazo. Asi el filtro tiene
  * una sola responsabilidad: identificar, no autorizar.
  *
- * Se declara como bean en SecurityConfig (no con @Component) para que
- * Spring Boot no lo registre ademas como filtro servlet suelto.
+ * SecurityConfig lo instancia dentro de la cadena (no es @Component ni
+ * @Bean) para que Spring Boot no lo registre ademas como filtro servlet suelto.
  */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

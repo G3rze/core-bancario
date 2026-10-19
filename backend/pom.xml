@@ -113,6 +113,18 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!-- Los tests que levantan el contexto necesitan JWT_SECRET; se fija
+                 aqui (valor solo de prueba) para que `mvn test` no dependa de
+                 que cada quien tenga su backend/.env. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <JWT_SECRET>secreto-solo-para-tests-no-usar-en-ningun-otro-lugar</JWT_SECRET>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
