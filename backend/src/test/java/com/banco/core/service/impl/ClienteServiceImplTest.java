@@ -49,6 +49,31 @@ class ClienteServiceImplTest {
     }
 
     @Test
+    void registrarConPasswordGuardaElHashYPermiteAutenticar() {
+        clienteService.registrar("12345678-9", "Ana Lopez", "San Salvador", "7777-7777",
+                TipoCliente.NATURAL, "clave123");
+
+        assertTrue(clienteService.autenticar("12345678-9", "clave123").isPresent());
+        assertTrue(clienteService.autenticar("12345678-9", "otraClave").isEmpty());
+        assertTrue(clienteService.buscarPorDui("12345678-9").orElseThrow().tienePassword());
+    }
+
+    @Test
+    void registrarConPasswordCortaLanzaExcepcionYNoPersiste() {
+        assertThrows(IllegalArgumentException.class, () -> clienteService.registrar(
+                "12345678-9", "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL, "123"));
+
+        assertTrue(clienteService.buscarPorDui("12345678-9").isEmpty());
+    }
+
+    @Test
+    void registrarSinPasswordDejaAlClienteSinCredenciales() {
+        clienteService.registrar("12345678-9", "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL);
+
+        assertTrue(clienteService.autenticar("12345678-9", "clave123").isEmpty());
+    }
+
+    @Test
     void registrarConDuiDuplicadoLanzaExcepcion() {
         clienteService.registrar("12345678-9", "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL);
 
