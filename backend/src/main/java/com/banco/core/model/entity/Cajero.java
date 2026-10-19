@@ -12,8 +12,8 @@ public class Cajero extends Empleado {
     private String cajaAsignada;
 
     public Cajero(String dui, String nombre, String direccion, String telefono, String sucursal,
-                  String cajaAsignada, String password) {
-        super(dui, nombre, direccion, telefono, sucursal, password);
+                  String cajaAsignada, String passwordHash) {
+        super(dui, nombre, direccion, telefono, sucursal, passwordHash);
         setCajaAsignada(cajaAsignada);
     }
 

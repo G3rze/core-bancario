@@ -1,6 +1,8 @@
 package com.banco.core.model.entity;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 
@@ -10,6 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EmpleadoTest {
+
+    private final PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @Test
     void cajeroAceptaDatosValidosYAsignaCodigoEmpleado() {
@@ -23,16 +27,26 @@ class EmpleadoTest {
     @Test
     void validarPasswordAceptaLaClaveCorrectaYRechazaOtra() {
         Cajero cajero = new Cajero("12345678-9", "Marta Diaz", "San Salvador", "7777-7777",
-                "Centro", "CAJA-01", "clave123");
+                "Centro", "CAJA-01", encoder.encode("clave123"));
 
-        assertTrue(cajero.validarPassword("clave123"));
-        assertFalse(cajero.validarPassword("otraClave"));
+        assertTrue(cajero.validarPassword("clave123", encoder));
+        assertFalse(cajero.validarPassword("otraClave", encoder));
     }
 
     @Test
-    void rechazaPasswordDemasiadoCorta() {
+    void rechazaHashVacio() {
         assertThrows(IllegalArgumentException.class, () -> new Cajero("12345678-9", "Marta Diaz",
-                "San Salvador", "7777-7777", "Centro", "CAJA-01", "123"));
+                "San Salvador", "7777-7777", "Centro", "CAJA-01", " "));
+    }
+
+    @Test
+    void administradorTieneRolAdminYNivelTotal() {
+        Administrador admin = new Administrador("12345678-9", "Root", "San Salvador", "7777-7777",
+                "Centro", encoder.encode("clave123"));
+
+        assertEquals(Rol.ADMIN, admin.getRol());
+        assertEquals("TOTAL", admin.getNivelAutorizacion());
+        assertTrue(admin.getCodigoEmpleado().startsWith("EMP-"));
     }
 
     @Test

@@ -93,11 +93,6 @@ public abstract class Usuario {
         return intento != null && passwordHash != null && encoder.matches(intento, passwordHash);
     }
 
-    /** Solo para subtipos del paquete que aun verifican con su propio algoritmo (ver Empleado). */
-    String hashAlmacenado() {
-        return passwordHash;
-    }
-
 
     public void setDui(String dui) {
         if (dui == null || !PATRON_DUI.matcher(dui).matches()) {

@@ -14,8 +14,8 @@ public class Gerente extends Empleado {
     private BigDecimal montoMaximoAprobacion;
 
     public Gerente(String dui, String nombre, String direccion, String telefono, String sucursal,
-                    BigDecimal montoMaximoAprobacion, String password) {
-        super(dui, nombre, direccion, telefono, sucursal, password);
+                    BigDecimal montoMaximoAprobacion, String passwordHash) {
+        super(dui, nombre, direccion, telefono, sucursal, passwordHash);
         setMontoMaximoAprobacion(montoMaximoAprobacion);
     }
 

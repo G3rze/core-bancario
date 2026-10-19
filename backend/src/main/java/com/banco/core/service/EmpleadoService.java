@@ -18,6 +18,9 @@ public interface EmpleadoService {
     Empleado registrarGerente(String dui, String nombre, String direccion, String telefono, String sucursal,
                                BigDecimal montoMaximoAprobacion, String password);
 
+    Empleado registrarAdministrador(String dui, String nombre, String direccion, String telefono, String sucursal,
+                                     String password);
+
     Optional<Empleado> autenticar(String dui, String password);
 
     Optional<Empleado> buscarPorCodigo(String codigoEmpleado);
