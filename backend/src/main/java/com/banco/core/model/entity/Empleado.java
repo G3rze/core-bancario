@@ -35,9 +35,6 @@ public abstract class Empleado extends Usuario {
     @Column(name = "fecha_contratacion", nullable = false, updatable = false)
     private final LocalDate fechaContratacion;
 
-    @Column(name = "password_hash", nullable = false)
-    private final String passwordHash;
-
     protected Empleado(String dui, String nombre, String direccion, String telefono, String sucursal,
                         String password) {
         super(dui, nombre, direccion, telefono);
@@ -46,7 +43,7 @@ public abstract class Empleado extends Usuario {
             throw new IllegalArgumentException(
                     "La contrasena debe tener al menos " + LARGO_MINIMO_PASSWORD + " caracteres");
         }
-        this.passwordHash = PasswordHasher.hash(password);
+        setPasswordHash(PasswordHasher.hash(password));
         this.codigoEmpleado = "EMP-%06d".formatted(CONTADOR_EMPLEADOS.getAndIncrement());
         this.fechaContratacion = LocalDate.now();
     }
@@ -54,13 +51,12 @@ public abstract class Empleado extends Usuario {
     protected Empleado() {
         this.codigoEmpleado = null;
         this.fechaContratacion = null;
-        this.passwordHash = null;
     }
 
     public abstract String getNivelAutorizacion();
 
     public boolean validarPassword(String intento) {
-        return intento != null && PasswordHasher.verificar(intento, passwordHash);
+        return intento != null && PasswordHasher.verificar(intento, hashAlmacenado());
     }
 
     /**

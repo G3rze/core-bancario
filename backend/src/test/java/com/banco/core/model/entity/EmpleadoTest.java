@@ -16,7 +16,7 @@ class EmpleadoTest {
         Cajero cajero = new Cajero("12345678-9", "Marta Diaz", "San Salvador", "7777-7777",
                 "Centro", "CAJA-01", "clave123");
 
-        assertEquals("CAJERO", cajero.getRol());
+        assertEquals(Rol.CAJERO, cajero.getRol());
         assertTrue(cajero.getCodigoEmpleado().startsWith("EMP-"));
     }
 
@@ -40,7 +40,7 @@ class EmpleadoTest {
         Gerente gerente = new Gerente("12345678-9", "Carlos Ruiz", "San Salvador", "7777-7777",
                 "Centro", new BigDecimal("5000.00"), "clave123");
 
-        assertEquals("GERENTE", gerente.getRol());
+        assertEquals(Rol.GERENTE, gerente.getRol());
         assertEquals("SUPERVISOR", gerente.getNivelAutorizacion());
     }
 

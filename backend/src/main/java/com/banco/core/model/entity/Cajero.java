@@ -32,8 +32,8 @@ public class Cajero extends Empleado {
     }
 
     @Override
-    public String getRol() {
-        return "CAJERO";
+    public Rol getRol() {
+        return Rol.CAJERO;
     }
 
     @Override

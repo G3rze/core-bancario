@@ -34,8 +34,8 @@ public class Gerente extends Empleado {
     }
 
     @Override
-    public String getRol() {
-        return "GERENTE";
+    public Rol getRol() {
+        return Rol.GERENTE;
     }
 
     @Override
