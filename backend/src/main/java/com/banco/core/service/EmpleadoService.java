@@ -27,4 +27,7 @@ public interface EmpleadoService {
 
     /** Para el bootstrap: mientras no exista ningun Gerente, dar de alta empleados queda sin restriccion. */
     boolean existeAlgunGerente();
+
+    /** Para el bootstrap: el seeder crea el primer administrador solo si no hay ninguno. */
+    boolean existeAlgunAdministrador();
 }

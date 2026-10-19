@@ -146,4 +146,9 @@ public class EmpleadoServiceImpl implements EmpleadoService {
     public boolean existeAlgunGerente() {
         return empleadoRepository.contarGerentes() > 0;
     }
+
+    @Override
+    public boolean existeAlgunAdministrador() {
+        return empleadoRepository.contarAdministradores() > 0;
+    }
 }

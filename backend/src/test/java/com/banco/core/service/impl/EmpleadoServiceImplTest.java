@@ -81,4 +81,12 @@ class EmpleadoServiceImplTest {
         assertTrue(servicio.autenticar("12345678-9", "mala").isEmpty());
         assertTrue(servicio.autenticar("00000000-0", "clave123").isEmpty());
     }
+
+    @Test
+    void existeAlgunAdministradorSeBasaEnElConteoDelRepositorio() {
+        when(repositorio.contarAdministradores()).thenReturn(0L, 1L);
+
+        assertFalse(servicio.existeAlgunAdministrador());
+        assertTrue(servicio.existeAlgunAdministrador());
+    }
 }
