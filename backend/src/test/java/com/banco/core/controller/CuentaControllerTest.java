@@ -6,6 +6,7 @@ import com.banco.core.model.entity.CuentaAhorros;
 import com.banco.core.model.entity.RegistroTransaccion;
 import com.banco.core.model.entity.TipoCliente;
 import com.banco.core.model.entity.TipoCuenta;
+import com.banco.core.model.entity.TipoTransaccion;
 import com.banco.core.security.AutorizacionCuentas;
 import com.banco.core.service.CuentaService;
 import org.junit.jupiter.api.Test;
@@ -90,8 +91,8 @@ class CuentaControllerTest {
                 "TRX-000002", "Transferencia", new BigDecimal("40.00"), LocalDateTime.now(),
                 "COMPLETADA", "AHO-000001", "AHO-000002", null,
                 new BigDecimal("60.00"), new BigDecimal("50.00"));
-        when(cuentaService.historial("AHO-000001")).thenReturn(java.util.List.of(transferencia));
-        when(cuentaService.historial("AHO-000002")).thenReturn(java.util.List.of(transferencia));
+        when(cuentaService.historialFiltrado("AHO-000001", null)).thenReturn(java.util.List.of(transferencia));
+        when(cuentaService.historialFiltrado("AHO-000002", null)).thenReturn(java.util.List.of(transferencia));
 
         mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones"))
                 .andExpect(status().isOk())
@@ -106,11 +107,44 @@ class CuentaControllerTest {
         RegistroTransaccion viejo = new RegistroTransaccion(
                 "TRX-000001", "Deposito", new BigDecimal("50.00"), LocalDateTime.now(),
                 "COMPLETADA", "AHO-000001", null, null);
-        when(cuentaService.historial("AHO-000001")).thenReturn(java.util.List.of(viejo));
+        when(cuentaService.historialFiltrado("AHO-000001", null)).thenReturn(java.util.List.of(viejo));
 
         mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].saldoPosterior").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void historialConTipoFiltraPorEseTipo() throws Exception {
+        RegistroTransaccion retiro = new RegistroTransaccion(
+                "TRX-000003", "Retiro", new BigDecimal("10.00"), LocalDateTime.now(),
+                "COMPLETADA", "AHO-000001", null, null);
+        when(cuentaService.historialFiltrado("AHO-000001", TipoTransaccion.RETIRO))
+                .thenReturn(java.util.List.of(retiro));
+
+        mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones").param("tipo", "retiro"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].tipo").value("Retiro"));
+    }
+
+    @Test
+    void historialConTipoEnBlancoNoFiltra() throws Exception {
+        when(cuentaService.historialFiltrado("AHO-000001", null)).thenReturn(java.util.List.of());
+
+        mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones").param("tipo", " "))
+                .andExpect(status().isOk());
+
+        verify(cuentaService).historialFiltrado("AHO-000001", null);
+    }
+
+    @Test
+    void historialConTipoDesconocidoDevuelve400() throws Exception {
+        mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones").param("tipo", "giro"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+
+        verify(cuentaService, never()).historialFiltrado(any(), any());
     }
 
     private static final String APERTURA = "{\"duiTitular\":\"12345678-9\",\"tipoCuenta\":\"%s\",\"saldoInicial\":100.00}";

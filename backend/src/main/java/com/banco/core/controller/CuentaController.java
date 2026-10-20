@@ -9,6 +9,7 @@ import com.banco.core.model.dto.TransaccionDTO;
 import com.banco.core.model.dto.TransferenciaRequest;
 import com.banco.core.security.AutorizacionCuentas;
 import com.banco.core.model.entity.TipoCuenta;
+import com.banco.core.model.entity.TipoTransaccion;
 import com.banco.core.service.CuentaService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -95,8 +96,11 @@ public class CuentaController {
 
     @GetMapping("/{numeroCuenta}/transacciones")
     @PreAuthorize(PUEDE_OPERAR)
-    public List<TransaccionDTO> historial(@PathVariable String numeroCuenta) {
-        return cuentaService.historial(numeroCuenta).stream()
+    public List<TransaccionDTO> historial(@PathVariable String numeroCuenta,
+                                          @RequestParam(required = false) String tipo) {
+        // Sin tipo (o en blanco) no se filtra; un tipo desconocido responde 400.
+        TipoTransaccion filtro = (tipo == null || tipo.isBlank()) ? null : TipoTransaccion.desde(tipo);
+        return cuentaService.historialFiltrado(numeroCuenta, filtro).stream()
                 .map(registro -> TransaccionDTO.desde(registro, numeroCuenta)).toList();
     }
 

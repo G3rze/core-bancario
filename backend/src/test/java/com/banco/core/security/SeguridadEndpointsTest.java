@@ -363,7 +363,7 @@ class SeguridadEndpointsTest {
         mockMvc.perform(get(rutaProtegida() + "/transacciones").header("Authorization", bearer(DUI_OTRO, "CLIENTE")))
                 .andExpect(status().isForbidden());
 
-        verify(cuentaService, never()).historial(any());
+        verify(cuentaService, never()).historialFiltrado(any(), any());
     }
 
     @Test
