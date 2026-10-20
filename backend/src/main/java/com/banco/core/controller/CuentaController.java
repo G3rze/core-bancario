@@ -100,8 +100,7 @@ public class CuentaController {
 
     @GetMapping("/{numeroCuenta}/transacciones/resumen")
     @PreAuthorize(PUEDE_OPERAR)
-public HistorialResumenDTO resumen(@PathVariable String numeroCuenta) {
-    return ((com.banco.core.service.impl.CuentaServiceImpl) cuentaService)
-            .resumenHistorial(numeroCuenta);
-}
+    public HistorialResumenDTO resumen(@PathVariable String numeroCuenta) {
+        return cuentaService.resumenHistorial(numeroCuenta);
+    }
 }

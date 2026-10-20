@@ -97,6 +97,7 @@ public class ClienteServiceImpl implements ClienteService {
      * Busqueda combinada para ventanilla (HU-007: "buscar clientes por
      * numero de cliente o DUI").
      */
+    @Override
     public Optional<Cliente> buscarPorDuiONumeroCliente(String identificador) {
         return buscarPorDui(identificador).or(() -> buscarPorNumeroCliente(identificador));
     }

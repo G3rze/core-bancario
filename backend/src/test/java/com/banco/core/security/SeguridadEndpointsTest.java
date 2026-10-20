@@ -12,6 +12,7 @@ import com.banco.core.model.entity.Cliente;
 import com.banco.core.model.entity.Cuenta;
 import com.banco.core.model.entity.CuentaAhorros;
 import com.banco.core.model.entity.TipoCliente;
+import com.banco.core.model.dto.HistorialResumenDTO;
 import com.banco.core.model.dto.LoginResponse;
 import com.banco.core.model.dto.UsuarioSesionDTO;
 import com.banco.core.service.AuthService;
@@ -378,6 +379,20 @@ class SeguridadEndpointsTest {
 
         verify(cuentaService, never()).retirar(any(), any());
         verify(cuentaService, never()).transferir(any(), any(), any());
+    }
+
+    @Test
+    void resumenDelHistorialRespetaLaPropiedadDeLaCuenta() throws Exception {
+        when(cuentaService.resumenHistorial(numeroCuenta))
+                .thenReturn(new HistorialResumenDTO(new BigDecimal("100.00"), new BigDecimal("30.00")));
+
+        mockMvc.perform(get(rutaProtegida() + "/transacciones/resumen")
+                        .header("Authorization", bearer(DUI_DUENO, "CLIENTE")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ingresos").value(100.00));
+        mockMvc.perform(get(rutaProtegida() + "/transacciones/resumen")
+                        .header("Authorization", bearer(DUI_OTRO, "CLIENTE")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
