@@ -8,6 +8,7 @@ import com.banco.core.model.entity.Notificacion;
 import com.banco.core.model.entity.RegistroTransaccion;
 import com.banco.core.model.entity.TipoCliente;
 import com.banco.core.model.entity.TipoCuenta;
+import com.banco.core.service.NotificacionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,9 @@ class CuentaServiceImplTest {
     @Autowired
     private CuentaServiceImpl cuentaService;
 
+    @Autowired
+    private NotificacionService notificacionService;
+
     @BeforeEach
     void registrarClientePrueba() {
         clienteService.registrar("12345678-9", "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL);
@@ -58,7 +62,7 @@ class CuentaServiceImplTest {
         // @Transactional) vive en el mismo bean singleton entre tests de
         // esta clase: se drena antes de cada test para que no arrastre las
         // notificaciones generadas por los tests anteriores.
-        cuentaService.obtenerNotificacionesPendientes();
+        notificacionService.obtenerPendientes();
     }
 
     @Test
@@ -189,10 +193,10 @@ class CuentaServiceImplTest {
         cuentaService.depositar(cuenta.getNumeroCuenta(), new BigDecimal("10.00"));
         cuentaService.depositar(cuenta.getNumeroCuenta(), new BigDecimal("20.00"));
 
-        List<Notificacion> pendientes = cuentaService.obtenerNotificacionesPendientes();
+        List<Notificacion> pendientes = notificacionService.obtenerPendientes();
 
         assertEquals(2, pendientes.size());
         assertTrue(pendientes.get(0).fecha().compareTo(pendientes.get(1).fecha()) <= 0);
-        assertTrue(cuentaService.obtenerNotificacionesPendientes().isEmpty());
+        assertTrue(notificacionService.obtenerPendientes().isEmpty());
     }
 }

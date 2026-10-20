@@ -12,7 +12,6 @@ import com.banco.core.model.entity.CuentaAhorros;
 import com.banco.core.model.entity.CuentaCorriente;
 import com.banco.core.model.entity.CuentaPlazoFijo;
 import com.banco.core.model.entity.Deposito;
-import com.banco.core.model.entity.Notificacion;
 import com.banco.core.model.entity.RegistroTransaccion;
 import com.banco.core.model.entity.TipoCuenta;
 import com.banco.core.model.entity.TipoTransaccion;
@@ -23,16 +22,14 @@ import com.banco.core.service.CuentaFactory;
 import com.banco.core.service.CuentaService;
 import com.banco.core.service.HistorialService;
 import com.banco.core.service.LimiteDiarioService;
+import com.banco.core.service.NotificacionService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import com.banco.core.model.dto.HistorialResumenDTO;
 
 @Service
@@ -44,19 +41,14 @@ public class CuentaServiceImpl implements CuentaService {
     private final CuentaFactory cuentaFactory;
     private final LimiteDiarioService limiteDiario;
     private final HistorialService historialService;
-
-    // Queue<Notificacion>: buffer FIFO de eventos generados por las
-    // transacciones. El envio real (push/SMS) esta fuera de alcance de este
-    // avance; la cola solo demuestra el patron productor/consumidor, y el
-    // orden estricto de entrada/salida es justo lo que Queue garantiza y
-    // List/Set no.
-    private final Queue<Notificacion> notificaciones = new ConcurrentLinkedQueue<>();
-
+    private final NotificacionService notificacionService;
 
     public CuentaServiceImpl(CuentaRepository cuentaRepository, ClienteRepository clienteRepository,
                               TransaccionDAO transaccionDAO, CuentaFactory cuentaFactory,
-                              LimiteDiarioService limiteDiario, HistorialService historialService) {
+                              LimiteDiarioService limiteDiario, HistorialService historialService,
+                              NotificacionService notificacionService) {
         this.historialService = historialService;
+        this.notificacionService = notificacionService;
         this.cuentaFactory = cuentaFactory;
         this.limiteDiario = limiteDiario;
         this.cuentaRepository = cuentaRepository;
@@ -213,7 +205,7 @@ public class CuentaServiceImpl implements CuentaService {
         RegistroTransaccion registro = RegistroTransaccion.desde(transaccion);
         transaccionDAO.guardar(registro);
         historialService.indexar(registro);
-        notificaciones.add(Notificacion.deTransaccion(transaccion));
+        notificacionService.registrar(transaccion);
         return registro;
     }
 
@@ -290,21 +282,6 @@ public class CuentaServiceImpl implements CuentaService {
             cuentaRepository.save(cuenta);
         }
         persistirTransaccion(transaccion);
-    }
-
-    /**
-     * Drena la cola de notificaciones pendientes (orden FIFO). No hay
-     * endpoint que la exponga todavia -push/SMS esta fuera de alcance de
-     * este avance-, pero queda disponible para cuando se conecte un
-     * despachador real o un test que verifique el orden de generacion.
-     */
-    public List<Notificacion> obtenerNotificacionesPendientes() {
-        List<Notificacion> pendientes = new ArrayList<>();
-        Notificacion siguiente;
-        while ((siguiente = notificaciones.poll()) != null) {
-            pendientes.add(siguiente);
-        }
-        return pendientes;
     }
 
     // ==== TODO — Tarea B4 de la planeacion: reglas de negocio ====
