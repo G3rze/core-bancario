@@ -100,7 +100,8 @@ class CuentaControllerTest {
                         .content("{\"monto\":10.00}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.comprobante").value(retiro.getComprobante()))
-                .andExpect(jsonPath("$.saldoPosterior").value(90.00));
+                .andExpect(jsonPath("$.saldoPosterior").value(90.00))
+                .andExpect(jsonPath("$.selloDigital").value(org.hamcrest.Matchers.nullValue()));
     }
 
     @Test

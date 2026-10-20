@@ -102,7 +102,9 @@ class VentanillaControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":50.00,\"codigoEmpleadoCajero\":\"OTRO-99\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.codigoEmpleadoCajero").value(cajero.getCodigoEmpleado()));
+                .andExpect(jsonPath("$.codigoEmpleadoCajero").value(cajero.getCodigoEmpleado()))
+                .andExpect(jsonPath("$.selloDigital").value(
+                        org.hamcrest.Matchers.startsWith(cajero.getCodigoEmpleado() + "-")));
 
         verify(cuentaService).depositarEnVentanilla(CUENTA, new BigDecimal("50.00"), cajero);
     }
@@ -132,7 +134,8 @@ class VentanillaControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"numeroCuentaDestino\":\"" + DESTINO + "\",\"monto\":20.00}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.tipo").value("Transferencia"));
+                .andExpect(jsonPath("$.tipo").value("Transferencia"))
+                .andExpect(jsonPath("$.selloDigital").exists());
 
         verify(cuentaService).transferirEnVentanilla(CUENTA, DESTINO, new BigDecimal("20.00"), cajero);
     }

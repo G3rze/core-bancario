@@ -69,7 +69,7 @@ public class VentanillaController {
 
         Cajero cajero = resolverCajero(authentication);
 
-        return TransaccionDTO.desde(
+        return TransaccionDTO.deVentanilla(
                 cuentaService.depositarEnVentanilla(
                         numeroCuenta,
                         request.monto(),
@@ -87,7 +87,7 @@ public class VentanillaController {
 
         Cajero cajero = resolverCajero(authentication);
 
-        return TransaccionDTO.desde(
+        return TransaccionDTO.deVentanilla(
                 cuentaService.retirarEnVentanilla(
                         numeroCuenta,
                         request.monto(),
@@ -105,7 +105,7 @@ public class VentanillaController {
 
         Cajero cajero = resolverCajero(authentication);
 
-        return TransaccionDTO.desde(
+        return TransaccionDTO.deVentanilla(
                 cuentaService.transferirEnVentanilla(
                         numeroCuenta,
                         request.numeroCuentaDestino(),
