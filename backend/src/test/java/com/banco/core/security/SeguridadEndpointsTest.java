@@ -3,6 +3,7 @@ package com.banco.core.security;
 import com.banco.core.config.CorsConfig;
 import com.banco.core.config.SecurityConfig;
 import com.banco.core.controller.AdminUsuarioController;
+import com.banco.core.controller.AuthController;
 import com.banco.core.controller.ClienteController;
 import com.banco.core.controller.CuentaController;
 import com.banco.core.controller.EmpleadoController;
@@ -11,6 +12,9 @@ import com.banco.core.model.entity.Cliente;
 import com.banco.core.model.entity.Cuenta;
 import com.banco.core.model.entity.CuentaAhorros;
 import com.banco.core.model.entity.TipoCliente;
+import com.banco.core.model.dto.LoginResponse;
+import com.banco.core.model.dto.UsuarioSesionDTO;
+import com.banco.core.service.AuthService;
 import com.banco.core.service.ClienteService;
 import com.banco.core.service.CuentaService;
 import com.banco.core.service.EmpleadoService;
@@ -23,11 +27,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +42,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -48,7 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * mockeados: aqui solo se prueba quien puede entrar, no la logica de negocio.
  */
 @WebMvcTest({CuentaController.class, ClienteController.class, EmpleadoController.class,
-        AdminUsuarioController.class})
+        AdminUsuarioController.class, AuthController.class})
 @Import({SecurityConfig.class, CorsConfig.class, JwtService.class, AutorizacionCuentasImpl.class})
 @TestPropertySource(properties = {
         "banco.jwt.secret=secreto-de-prueba-con-mas-de-32-caracteres!!",
@@ -76,6 +83,9 @@ class SeguridadEndpointsTest {
 
     @MockitoBean
     private UsuarioAdminService usuarioAdminService;
+
+    @MockitoBean
+    private AuthService authService;
 
     @MockitoBean
     private CargadorDeIdentidad cargadorDeIdentidad;
@@ -275,5 +285,118 @@ class SeguridadEndpointsTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ---- P7: tokens defectuosos -> 401 con cuerpo {"error": ...} ----
+
+    private static final String SECRETO = "secreto-de-prueba-con-mas-de-32-caracteres!!";
+
+    private String rutaProtegida() {
+        return "/api/cuentas/" + numeroCuenta;
+    }
+
+    @Test
+    void tokenBasuraDevuelve401ConCuerpoJson() throws Exception {
+        mockMvc.perform(get(rutaProtegida()).header("Authorization", "Bearer esto.no.es.un.jwt"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void tokenExpiradoDevuelve401() throws Exception {
+        String vencido = new JwtService(SECRETO, -1_000).generarToken(DUI_DUENO, "CLIENTE");
+
+        mockMvc.perform(get(rutaProtegida()).header("Authorization", "Bearer " + vencido))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void tokenFirmadoConOtraClaveDevuelve401() throws Exception {
+        String ajeno = new JwtService("otra-clave-distinta-con-mas-de-32-caracteres", 60_000)
+                .generarToken(DUI_DUENO, "CLIENTE");
+
+        mockMvc.perform(get(rutaProtegida()).header("Authorization", "Bearer " + ajeno))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void esquemaDistintoDeBearerDevuelve401() throws Exception {
+        String token = bearer(DUI_DUENO, "CLIENTE").substring("Bearer ".length());
+
+        mockMvc.perform(get(rutaProtegida()).header("Authorization", "Basic " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void tokenDeUsuarioQueYaNoExisteDevuelve401() throws Exception {
+        String token = jwtService.generarToken(DUI_DUENO, "CLIENTE");
+        when(cargadorDeIdentidad.cargar(DUI_DUENO, "CLIENTE")).thenThrow(new UsernameNotFoundException("borrado"));
+
+        mockMvc.perform(get(rutaProtegida()).header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void tokenDeUsuarioDesactivadoDevuelve401() throws Exception {
+        String token = jwtService.generarToken(DUI_DUENO, "CLIENTE");
+        when(cargadorDeIdentidad.cargar(DUI_DUENO, "CLIENTE")).thenReturn(
+                User.withUsername(DUI_DUENO).password("")
+                        .authorities(new SimpleGrantedAuthority("ROLE_CLIENTE")).disabled(true).build());
+
+        mockMvc.perform(get(rutaProtegida()).header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---- P7: 403 con cuerpo JSON y servicio sin invocar ----
+
+    @Test
+    void rolIncorrectoDevuelve403ConCuerpoJson() throws Exception {
+        mockMvc.perform(get("/api/clientes").header("Authorization", bearer(DUI_DUENO, "CLIENTE")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void clienteNoLeeElHistorialDeUnaCuentaAjena() throws Exception {
+        mockMvc.perform(get(rutaProtegida() + "/transacciones").header("Authorization", bearer(DUI_OTRO, "CLIENTE")))
+                .andExpect(status().isForbidden());
+
+        verify(cuentaService, never()).historial(any());
+    }
+
+    @Test
+    void clienteNoRetiraNiTransfiereDesdeCuentaAjena() throws Exception {
+        mockMvc.perform(post(rutaProtegida() + "/retiros")
+                        .header("Authorization", bearer(DUI_OTRO, "CLIENTE"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"monto\":10.00}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post(rutaProtegida() + "/transferencias")
+                        .header("Authorization", bearer(DUI_OTRO, "CLIENTE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"numeroCuentaDestino\":\"X\",\"monto\":10.00}"))
+                .andExpect(status().isForbidden());
+
+        verify(cuentaService, never()).retirar(any(), any());
+        verify(cuentaService, never()).transferir(any(), any(), any());
+    }
+
+    @Test
+    void adminNoOperaCuentas() throws Exception {
+        // Decision de contrato: ADMIN gestiona usuarios, no mueve dinero ni ve cuentas.
+        mockMvc.perform(get(rutaProtegida()).header("Authorization", bearer("00000000-0", "ADMIN")))
+                .andExpect(status().isForbidden());
+    }
+
+    // ---- P7: rutas publicas ----
+
+    @Test
+    void loginEsPublicoYNoPideToken() throws Exception {
+        when(authService.login(anyString(), anyString())).thenReturn(new LoginResponse("tok", Instant.now(),
+                new UsuarioSesionDTO(DUI_DUENO, "Ana Lopez", "CLIENTE", null, "C-1")));
+
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dui\":\"" + DUI_DUENO + "\",\"password\":\"clave123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("tok"));
     }
 }
