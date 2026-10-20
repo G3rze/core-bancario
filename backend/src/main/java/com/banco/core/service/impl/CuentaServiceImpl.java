@@ -145,6 +145,7 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
      * diferencia del flujo de cliente, donde cajero siempre es null- porque
      * si alguien llega a este metodo es porque vino de la ventanilla.
      */
+    @Override
     @Transactional
     public RegistroTransaccion depositarEnVentanilla(String numeroCuenta, BigDecimal monto, Cajero cajero) {
         return depositar(numeroCuenta, monto, requireCajero(cajero));
@@ -167,6 +168,7 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
         return retirar(numeroCuenta, monto, null);
     }
 
+    @Override
     @Transactional
     public RegistroTransaccion retirarEnVentanilla(String numeroCuenta, BigDecimal monto, Cajero cajero) {
         return retirar(numeroCuenta, monto, requireCajero(cajero));
@@ -197,6 +199,7 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
         return transferir(numeroCuentaOrigen, numeroCuentaDestino, monto, null);
     }
 
+    @Override
     @Transactional
     public RegistroTransaccion transferirEnVentanilla(String numeroCuentaOrigen, String numeroCuentaDestino,
                                                         BigDecimal monto, Cajero cajero) {
@@ -265,6 +268,7 @@ public List<RegistroTransaccion> historial(String numeroCuenta) {
     }
 }
 
+@Override
 public List<RegistroTransaccion> historialFiltrado(
         String numeroCuenta,
         String tipo) {
@@ -278,6 +282,7 @@ public List<RegistroTransaccion> historialFiltrado(
             .toList();
 }
 
+@Override
 public HistorialResumenDTO resumenHistorial(String numeroCuenta) {
 
     List<RegistroTransaccion> movimientos = historial(numeroCuenta);

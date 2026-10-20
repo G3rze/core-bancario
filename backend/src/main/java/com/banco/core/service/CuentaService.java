@@ -1,5 +1,7 @@
 package com.banco.core.service;
 
+import com.banco.core.model.dto.HistorialResumenDTO;
+import com.banco.core.model.entity.Cajero;
 import com.banco.core.model.entity.Cuenta;
 import com.banco.core.model.entity.RegistroTransaccion;
 
@@ -31,4 +33,21 @@ public interface CuentaService {
     RegistroTransaccion transferir(String numeroCuentaOrigen, String numeroCuentaDestino, BigDecimal monto);
 
     List<RegistroTransaccion> historial(String numeroCuenta);
+
+    /**
+     * Variantes de ventanilla (HU-007): igual que depositar/retirar/transferir
+     * pero dejan registrado el cajero que las proceso, que es obligatorio.
+     */
+    RegistroTransaccion depositarEnVentanilla(String numeroCuenta, BigDecimal monto, Cajero cajero);
+
+    RegistroTransaccion retirarEnVentanilla(String numeroCuenta, BigDecimal monto, Cajero cajero);
+
+    RegistroTransaccion transferirEnVentanilla(String numeroCuentaOrigen, String numeroCuentaDestino,
+                                               BigDecimal monto, Cajero cajero);
+
+    /** Historial de la cuenta; {@code tipo} nulo o en blanco no filtra. */
+    List<RegistroTransaccion> historialFiltrado(String numeroCuenta, String tipo);
+
+    /** Total de ingresos (depositos) y egresos (retiros y transferencias) de la cuenta. */
+    HistorialResumenDTO resumenHistorial(String numeroCuenta);
 }
