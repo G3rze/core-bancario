@@ -192,4 +192,14 @@ public abstract class Cuenta {
         return "%s{numeroCuenta='%s', saldo=%s, estado=%s}".formatted(
                 getClass().getSimpleName(), numeroCuenta, saldo, estado);
     }
+
+    /**
+     * Comprobante de apertura (HU-002). Usa getTipoCuenta(), que cada
+     * subtipo sobreescribe, asi el texto sale correcto sin un switch.
+     */
+    public String generarComprobanteApertura() {
+        return "Apertura %s | Cuenta %s | Titular %s (%s) | Saldo inicial %s | Fecha %s".formatted(
+                getTipoCuenta(), getNumeroCuenta(), getTitular().getNombre(),
+                getTitular().getNumeroCliente(), getSaldo(), getFechaApertura());
+    }
 }

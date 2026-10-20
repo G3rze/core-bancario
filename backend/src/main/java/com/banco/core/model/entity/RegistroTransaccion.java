@@ -35,6 +35,9 @@ public class RegistroTransaccion implements Serializable {
     // sin saldo posterior (no se inventa uno) y siguen leyendose.
     private final BigDecimal saldoPosteriorOrigen;
     private final BigDecimal saldoPosteriorDestino;
+    // Texto de Transaccion.generarComprobante() al momento de ejecutarse;
+    // null en registros anteriores a este campo (mismo criterio que los saldos).
+    private final String comprobante;
 
     /** Registro sin saldos posteriores (equivale a uno leido de un .dat anterior). */
     public RegistroTransaccion(String numeroTransaccion, String tipo, BigDecimal monto, LocalDateTime fecha,
@@ -44,10 +47,19 @@ public class RegistroTransaccion implements Serializable {
                 codigoEmpleadoCajero, null, null);
     }
 
+    /** Registro con saldos pero sin comprobante (equivale a uno leido de un .dat de antes de B5). */
     public RegistroTransaccion(String numeroTransaccion, String tipo, BigDecimal monto, LocalDateTime fecha,
                                 String estado, String numeroCuentaOrigen, String numeroCuentaDestino,
                                 String codigoEmpleadoCajero, BigDecimal saldoPosteriorOrigen,
                                 BigDecimal saldoPosteriorDestino) {
+        this(numeroTransaccion, tipo, monto, fecha, estado, numeroCuentaOrigen, numeroCuentaDestino,
+                codigoEmpleadoCajero, saldoPosteriorOrigen, saldoPosteriorDestino, null);
+    }
+
+    public RegistroTransaccion(String numeroTransaccion, String tipo, BigDecimal monto, LocalDateTime fecha,
+                                String estado, String numeroCuentaOrigen, String numeroCuentaDestino,
+                                String codigoEmpleadoCajero, BigDecimal saldoPosteriorOrigen,
+                                BigDecimal saldoPosteriorDestino, String comprobante) {
         this.numeroTransaccion = numeroTransaccion;
         this.tipo = tipo;
         this.monto = monto;
@@ -58,6 +70,7 @@ public class RegistroTransaccion implements Serializable {
         this.codigoEmpleadoCajero = codigoEmpleadoCajero;
         this.saldoPosteriorOrigen = saldoPosteriorOrigen;
         this.saldoPosteriorDestino = saldoPosteriorDestino;
+        this.comprobante = comprobante;
     }
 
     public static RegistroTransaccion desde(Transaccion transaccion) {
@@ -87,7 +100,8 @@ public class RegistroTransaccion implements Serializable {
                 destino,
                 transaccion.getCajero().map(Cajero::getCodigoEmpleado).orElse(null),
                 transaccion.getSaldoPosteriorOrigen(),
-                transaccion.getSaldoPosteriorDestino());
+                transaccion.getSaldoPosteriorDestino(),
+                transaccion.generarComprobante());
     }
 
     public Long getId() {
@@ -132,6 +146,10 @@ public class RegistroTransaccion implements Serializable {
 
     public String getNumeroCuentaDestino() {
         return numeroCuentaDestino;
+    }
+
+    public String getComprobante() {
+        return comprobante;
     }
 
     public String getCodigoEmpleadoCajero() {

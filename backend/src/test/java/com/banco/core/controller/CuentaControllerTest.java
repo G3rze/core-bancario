@@ -88,6 +88,44 @@ class CuentaControllerTest {
     }
 
     @Test
+    void lasOperacionesDevuelvenElComprobanteGuardado() throws Exception {
+        RegistroTransaccion retiro = new RegistroTransaccion(
+                "TRX-000009", "Retiro", new BigDecimal("10.00"), LocalDateTime.now(),
+                "COMPLETADA", "AHO-000001", null, null, new BigDecimal("90.00"), null,
+                "Retiro TRX-000009 | Cuenta AHO-000001 | Monto 10.00 | Estado COMPLETADA");
+        when(cuentaService.retirar("AHO-000001", new BigDecimal("10.00"))).thenReturn(retiro);
+
+        mockMvc.perform(post("/api/cuentas/AHO-000001/retiros")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"monto\":10.00}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comprobante").value(retiro.getComprobante()))
+                .andExpect(jsonPath("$.saldoPosterior").value(90.00))
+                .andExpect(jsonPath("$.selloDigital").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void abrirCuentaDevuelveElComprobanteDeApertura() throws Exception {
+        Cuenta cuenta = cuentaPrueba();
+        when(autorizacion.titularEfectivo(any(), any())).thenReturn("12345678-9");
+        when(cuentaService.abrirCuenta(any(), any(), any(), any())).thenReturn(cuenta);
+
+        mockMvc.perform(post("/api/cuentas").contentType(MediaType.APPLICATION_JSON)
+                        .content(APERTURA.formatted("AHORROS")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.comprobante").value(cuenta.generarComprobanteApertura()));
+    }
+
+    @Test
+    void consultarUnaCuentaNoLlevaComprobanteDeApertura() throws Exception {
+        Cuenta cuenta = cuentaPrueba();
+        when(cuentaService.buscarPorNumero(cuenta.getNumeroCuenta())).thenReturn(Optional.of(cuenta));
+
+        mockMvc.perform(get("/api/cuentas/" + cuenta.getNumeroCuenta()))
+                .andExpect(jsonPath("$.comprobante").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
     void historialMuestraElSaldoPosteriorDeLaCuentaConsultada() throws Exception {
         RegistroTransaccion transferencia = new RegistroTransaccion(
                 "TRX-000002", "Transferencia", new BigDecimal("40.00"), LocalDateTime.now(),
