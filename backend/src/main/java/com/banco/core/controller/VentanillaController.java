@@ -1,5 +1,6 @@
 package com.banco.core.controller;
 
+import com.banco.core.exception.AccesoNoAutorizadoException;
 import com.banco.core.exception.ClienteNoEncontradoException;
 import com.banco.core.exception.EmpleadoNoEncontradoException;
 import com.banco.core.model.dto.ClienteConCuentasDTO;
@@ -14,12 +15,17 @@ import com.banco.core.service.EmpleadoService;
 import com.banco.core.service.impl.ClienteServiceImpl;
 import com.banco.core.service.impl.CuentaServiceImpl;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/ventanilla")
 @PreAuthorize("hasAnyRole('CAJERO','GERENTE')")
 public class VentanillaController {
+
+    // Un movimiento de ventanilla queda firmado por un Cajero (Transaccion
+    // guarda un Cajero), asi que el GERENTE solo consulta; no mueve dinero.
+    private static final String SOLO_CAJERO = "hasRole('CAJERO')";
 
     private final ClienteServiceImpl clienteService;
     private final CuentaServiceImpl cuentaService;
@@ -55,11 +61,13 @@ public class VentanillaController {
     }
 
     @PostMapping("/cuentas/{numeroCuenta}/depositos")
+    @PreAuthorize(SOLO_CAJERO)
     public TransaccionDTO depositar(
             @PathVariable String numeroCuenta,
-            @RequestBody VentanillaMovimientoRequest request) {
+            @RequestBody VentanillaMovimientoRequest request,
+            Authentication authentication) {
 
-        Cajero cajero = resolverCajero(request.codigoEmpleadoCajero());
+        Cajero cajero = resolverCajero(authentication);
 
         return TransaccionDTO.desde(
                 cuentaService.depositarEnVentanilla(
@@ -71,11 +79,13 @@ public class VentanillaController {
     }
 
     @PostMapping("/cuentas/{numeroCuenta}/retiros")
+    @PreAuthorize(SOLO_CAJERO)
     public TransaccionDTO retirar(
             @PathVariable String numeroCuenta,
-            @RequestBody VentanillaMovimientoRequest request) {
+            @RequestBody VentanillaMovimientoRequest request,
+            Authentication authentication) {
 
-        Cajero cajero = resolverCajero(request.codigoEmpleadoCajero());
+        Cajero cajero = resolverCajero(authentication);
 
         return TransaccionDTO.desde(
                 cuentaService.retirarEnVentanilla(
@@ -87,11 +97,13 @@ public class VentanillaController {
     }
 
     @PostMapping("/cuentas/{numeroCuenta}/transferencias")
+    @PreAuthorize(SOLO_CAJERO)
     public TransaccionDTO transferir(
             @PathVariable String numeroCuenta,
-            @RequestBody VentanillaTransferenciaRequest request) {
+            @RequestBody VentanillaTransferenciaRequest request,
+            Authentication authentication) {
 
-        Cajero cajero = resolverCajero(request.codigoEmpleadoCajero());
+        Cajero cajero = resolverCajero(authentication);
 
         return TransaccionDTO.desde(
                 cuentaService.transferirEnVentanilla(
@@ -103,16 +115,21 @@ public class VentanillaController {
         );
     }
 
-    private Cajero resolverCajero(String codigoEmpleado) {
+    /**
+     * El cajero sale del token, no del body: asi nadie puede registrar un
+     * movimiento a nombre de otro empleado.
+     */
+    private Cajero resolverCajero(Authentication authentication) {
+
+        String dui = authentication.getName();
 
         Empleado empleado = empleadoService
-                .buscarPorCodigo(codigoEmpleado)
-                .orElseThrow(() ->
-                        EmpleadoNoEncontradoException.porCodigo(codigoEmpleado));
+                .buscarPorDui(dui)
+                .orElseThrow(() -> EmpleadoNoEncontradoException.porDui(dui));
 
         if (!(empleado instanceof Cajero cajero)) {
-            throw new IllegalArgumentException(
-                    "El empleado indicado no es un cajero");
+            throw new AccesoNoAutorizadoException(
+                    "Solo un cajero puede operar en ventanilla");
         }
 
         return cajero;

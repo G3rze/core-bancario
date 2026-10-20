@@ -132,6 +132,11 @@ public class EmpleadoServiceImpl implements EmpleadoService {
     }
 
     @Override
+    public Optional<Empleado> buscarPorDui(String dui) {
+        return empleadoRepository.findByDui(dui);
+    }
+
+    @Override
     public Optional<Empleado> buscarPorCodigo(String codigoEmpleado) {
         return empleadoRepository.findByCodigoEmpleado(codigoEmpleado);
     }

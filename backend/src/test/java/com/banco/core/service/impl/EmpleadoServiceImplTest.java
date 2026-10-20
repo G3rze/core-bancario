@@ -89,4 +89,18 @@ class EmpleadoServiceImplTest {
         assertFalse(servicio.existeAlgunAdministrador());
         assertTrue(servicio.existeAlgunAdministrador());
     }
+
+    @Test
+    void buscarPorDuiDelegaEnElRepositorio() {
+        Empleado cajero = registrarCajeroGuardado();
+        when(repositorio.findByDui("12345678-9")).thenReturn(Optional.of(cajero));
+
+        assertEquals(Optional.of(cajero), servicio.buscarPorDui("12345678-9"));
+        assertTrue(servicio.buscarPorDui("00000000-0").isEmpty());
+    }
+
+    private Empleado registrarCajeroGuardado() {
+        when(repositorio.save(any(Empleado.class))).thenAnswer(inv -> inv.getArgument(0));
+        return registrarCajero("clave123");
+    }
 }
