@@ -18,7 +18,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class NegocioExceptionHandler {
 
-    @ExceptionHandler({ClienteNoEncontradoException.class, CuentaNoEncontradaException.class})
+    @ExceptionHandler({ClienteNoEncontradoException.class, CuentaNoEncontradaException.class,
+            UsuarioNoEncontradoException.class})
     public ResponseEntity<Map<String, String>> manejarNoEncontrado(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
     }

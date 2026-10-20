@@ -5,6 +5,7 @@ import com.banco.core.model.entity.Cuenta;
 import com.banco.core.model.entity.CuentaAhorros;
 import com.banco.core.model.entity.RegistroTransaccion;
 import com.banco.core.model.entity.TipoCliente;
+import com.banco.core.security.AutorizacionCuentas;
 import com.banco.core.service.CuentaService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,9 @@ class CuentaControllerTest {
 
     @MockitoBean
     private CuentaService cuentaService;
+
+    @MockitoBean
+    private AutorizacionCuentas autorizacion;
 
     private Cuenta cuentaPrueba() {
         Cliente titular = new Cliente("12345678-9", "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL);
