@@ -21,6 +21,7 @@ import com.banco.core.model.entity.Transaccion;
 import com.banco.core.model.entity.Transferencia;
 import com.banco.core.service.CuentaFactory;
 import com.banco.core.service.CuentaService;
+import com.banco.core.service.LimiteDiarioService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +36,6 @@ import java.util.Queue;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.time.LocalDate;
 import com.banco.core.model.dto.HistorialResumenDTO;
 
 @Service
@@ -48,6 +48,7 @@ public class CuentaServiceImpl implements CuentaService {
     private final ClienteRepository clienteRepository;
     private final TransaccionDAO transaccionDAO;
     private final CuentaFactory cuentaFactory;
+    private final LimiteDiarioService limiteDiario;
 
     // Map<numeroCuenta, TreeSet<RegistroTransaccion>>: el historial de una
     // cuenta debe mostrarse en orden cronologico (HU-006); TreeSet mantiene
@@ -65,13 +66,12 @@ public class CuentaServiceImpl implements CuentaService {
     // List/Set no.
     private final Queue<Notificacion> notificaciones = new ConcurrentLinkedQueue<>();
 
-    // HU-004 / HU-005
-private final Map<String, BigDecimal> acumuladoDiario = new ConcurrentHashMap<>();
-private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
 
     public CuentaServiceImpl(CuentaRepository cuentaRepository, ClienteRepository clienteRepository,
-                              TransaccionDAO transaccionDAO, CuentaFactory cuentaFactory) {
+                              TransaccionDAO transaccionDAO, CuentaFactory cuentaFactory,
+                              LimiteDiarioService limiteDiario) {
         this.cuentaFactory = cuentaFactory;
+        this.limiteDiario = limiteDiario;
         this.cuentaRepository = cuentaRepository;
         this.clienteRepository = clienteRepository;
         this.transaccionDAO = transaccionDAO;
@@ -169,11 +169,11 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
 
     synchronized (cuenta) {
 
-        validarLimiteDiario(cuenta, monto);
+        limiteDiario.validar(cuenta, monto);
 
         transaccion.ejecutar();
 
-        registrarMovimientoDiario(cuenta, monto);
+        limiteDiario.registrar(cuenta, monto);
 
         cuentaRepository.save(cuenta);
     }
@@ -209,11 +209,11 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
         synchronized (primero) {
     synchronized (segundo) {
 
-        validarLimiteDiario(origen, monto);
+        limiteDiario.validar(origen, monto);
 
         transaccion.ejecutar();
 
-        registrarMovimientoDiario(origen, monto);
+        limiteDiario.registrar(origen, monto);
 
         cuentaRepository.save(origen);
         cuentaRepository.save(destino);
@@ -302,45 +302,6 @@ public HistorialResumenDTO resumenHistorial(String numeroCuenta) {
         }
         return cajero;
     }
-    
-    private void validarLimiteDiario(Cuenta cuenta, BigDecimal monto) {
-
-    LocalDate hoy = LocalDate.now();
-    String numeroCuenta = cuenta.getNumeroCuenta();
-
-    LocalDate ultimaFecha = fechaAcumulado.get(numeroCuenta);
-
-    if (ultimaFecha == null || !ultimaFecha.equals(hoy)) {
-        fechaAcumulado.put(numeroCuenta, hoy);
-        acumuladoDiario.put(numeroCuenta, BigDecimal.ZERO);
-    }
-
-    BigDecimal acumuladoActual =
-            acumuladoDiario.getOrDefault(numeroCuenta, BigDecimal.ZERO);
-
-    BigDecimal nuevoAcumulado = acumuladoActual.add(monto);
-
-    if (nuevoAcumulado.compareTo(cuenta.getLimiteRetiroDiario()) > 0) {
-        throw new IllegalArgumentException(
-                "La operacion excede el limite diario permitido");
-    }
-}
-
-private void registrarMovimientoDiario(Cuenta cuenta, BigDecimal monto) {
-
-    String numeroCuenta = cuenta.getNumeroCuenta();
-
-    acumuladoDiario.merge(
-            numeroCuenta,
-            monto,
-            BigDecimal::add
-    );
-
-    fechaAcumulado.put(
-            numeroCuenta,
-            LocalDate.now()
-    );
-}
 
     /**
      * Capitaliza el interes periodico de las cuentas de ahorro. Es la unica
