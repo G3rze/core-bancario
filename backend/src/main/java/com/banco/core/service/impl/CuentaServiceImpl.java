@@ -12,7 +12,6 @@ import com.banco.core.model.entity.CuentaAhorros;
 import com.banco.core.model.entity.CuentaCorriente;
 import com.banco.core.model.entity.CuentaPlazoFijo;
 import com.banco.core.model.entity.Deposito;
-import com.banco.core.model.entity.Notificacion;
 import com.banco.core.model.entity.RegistroTransaccion;
 import com.banco.core.model.entity.TipoCuenta;
 import com.banco.core.model.entity.TipoTransaccion;
@@ -21,57 +20,37 @@ import com.banco.core.model.entity.Transaccion;
 import com.banco.core.model.entity.Transferencia;
 import com.banco.core.service.CuentaFactory;
 import com.banco.core.service.CuentaService;
+import com.banco.core.service.HistorialService;
+import com.banco.core.service.LimiteDiarioService;
+import com.banco.core.service.NotificacionService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.time.LocalDate;
 import com.banco.core.model.dto.HistorialResumenDTO;
 
 @Service
 public class CuentaServiceImpl implements CuentaService {
 
-    private static final Comparator<RegistroTransaccion> ORDEN_CRONOLOGICO =
-            Comparator.comparing(RegistroTransaccion::getFecha).thenComparing(RegistroTransaccion::getNumeroTransaccion);
-
     private final CuentaRepository cuentaRepository;
     private final ClienteRepository clienteRepository;
     private final TransaccionDAO transaccionDAO;
     private final CuentaFactory cuentaFactory;
-
-    // Map<numeroCuenta, TreeSet<RegistroTransaccion>>: el historial de una
-    // cuenta debe mostrarse en orden cronologico (HU-006); TreeSet mantiene
-    // ese orden en cada insercion en vez de tener que ordenar toda la lista
-    // en cada consulta. Sigue en memoria (no hay tabla de transacciones en
-    // Postgres, transacciones.dat es la unica fuente persistida) porque
-    // reconstruirlo leyendo el .dat completo en cada request seria mas caro
-    // que mantenerlo actualizado incrementalmente.
-    private final Map<String, TreeSet<RegistroTransaccion>> historialPorCuenta = new ConcurrentHashMap<>();
-
-    // Queue<Notificacion>: buffer FIFO de eventos generados por las
-    // transacciones. El envio real (push/SMS) esta fuera de alcance de este
-    // avance; la cola solo demuestra el patron productor/consumidor, y el
-    // orden estricto de entrada/salida es justo lo que Queue garantiza y
-    // List/Set no.
-    private final Queue<Notificacion> notificaciones = new ConcurrentLinkedQueue<>();
-
-    // HU-004 / HU-005
-private final Map<String, BigDecimal> acumuladoDiario = new ConcurrentHashMap<>();
-private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
+    private final LimiteDiarioService limiteDiario;
+    private final HistorialService historialService;
+    private final NotificacionService notificacionService;
 
     public CuentaServiceImpl(CuentaRepository cuentaRepository, ClienteRepository clienteRepository,
-                              TransaccionDAO transaccionDAO, CuentaFactory cuentaFactory) {
+                              TransaccionDAO transaccionDAO, CuentaFactory cuentaFactory,
+                              LimiteDiarioService limiteDiario, HistorialService historialService,
+                              NotificacionService notificacionService) {
+        this.historialService = historialService;
+        this.notificacionService = notificacionService;
         this.cuentaFactory = cuentaFactory;
+        this.limiteDiario = limiteDiario;
         this.cuentaRepository = cuentaRepository;
         this.clienteRepository = clienteRepository;
         this.transaccionDAO = transaccionDAO;
@@ -88,7 +67,7 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
         // reconstruyen leyendolo completo al arrancar.
         transaccionDAO.listarTodos().forEach(registro -> {
             Transaccion.avanzarContador(registro.getNumeroTransaccion());
-            indexarEnHistorial(registro);
+            historialService.indexar(registro);
         });
     }
 
@@ -169,11 +148,11 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
 
     synchronized (cuenta) {
 
-        validarLimiteDiario(cuenta, monto);
+        limiteDiario.validar(cuenta, monto);
 
         transaccion.ejecutar();
 
-        registrarMovimientoDiario(cuenta, monto);
+        limiteDiario.registrar(cuenta, monto);
 
         cuentaRepository.save(cuenta);
     }
@@ -209,11 +188,11 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
         synchronized (primero) {
     synchronized (segundo) {
 
-        validarLimiteDiario(origen, monto);
+        limiteDiario.validar(origen, monto);
 
         transaccion.ejecutar();
 
-        registrarMovimientoDiario(origen, monto);
+        limiteDiario.registrar(origen, monto);
 
         cuentaRepository.save(origen);
         cuentaRepository.save(destino);
@@ -225,71 +204,28 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
     private RegistroTransaccion persistirTransaccion(Transaccion transaccion) {
         RegistroTransaccion registro = RegistroTransaccion.desde(transaccion);
         transaccionDAO.guardar(registro);
-        indexarEnHistorial(registro);
-        notificaciones.add(Notificacion.deTransaccion(transaccion));
+        historialService.indexar(registro);
+        notificacionService.registrar(transaccion);
         return registro;
     }
 
-    private void indexarEnHistorial(RegistroTransaccion registro) {
-        registro.numerosCuentaInvolucradas().forEach(numeroCuenta -> {
-            TreeSet<RegistroTransaccion> historial =
-                    historialPorCuenta.computeIfAbsent(numeroCuenta, k -> new TreeSet<>(ORDEN_CRONOLOGICO));
-            synchronized (historial) {
-                historial.add(registro);
-            }
-        });
+    @Override
+    public List<RegistroTransaccion> historial(String numeroCuenta) {
+        obtenerCuenta(numeroCuenta);
+        return historialService.listar(numeroCuenta);
     }
 
     @Override
-public List<RegistroTransaccion> historial(String numeroCuenta) {
-    obtenerCuenta(numeroCuenta);
-
-    TreeSet<RegistroTransaccion> historial =
-            historialPorCuenta.get(numeroCuenta);
-
-    if (historial == null) {
-        return List.of();
+    public List<RegistroTransaccion> historialFiltrado(String numeroCuenta, TipoTransaccion tipo) {
+        obtenerCuenta(numeroCuenta);
+        return historialService.filtrar(numeroCuenta, tipo);
     }
 
-    synchronized (historial) {
-        return List.copyOf(historial);
+    @Override
+    public HistorialResumenDTO resumenHistorial(String numeroCuenta) {
+        obtenerCuenta(numeroCuenta);
+        return historialService.resumir(numeroCuenta);
     }
-}
-
-@Override
-public List<RegistroTransaccion> historialFiltrado(
-        String numeroCuenta,
-        TipoTransaccion tipo) {
-
-    return historial(numeroCuenta)
-            .stream()
-            .filter(registro ->
-                    tipo == null || registro.getTipoTransaccion() == tipo)
-            .toList();
-}
-
-@Override
-public HistorialResumenDTO resumenHistorial(String numeroCuenta) {
-
-    List<RegistroTransaccion> movimientos = historial(numeroCuenta);
-
-    BigDecimal ingresos = movimientos.stream()
-            .filter(registro ->
-                    registro.getTipoTransaccion().esIngreso())
-            .map(RegistroTransaccion::getMonto)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-    BigDecimal egresos = movimientos.stream()
-            .filter(registro ->
-                    !registro.getTipoTransaccion().esIngreso())
-            .map(RegistroTransaccion::getMonto)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-    return new HistorialResumenDTO(
-            ingresos,
-            egresos
-    );
-}
 
     private Cuenta obtenerCuenta(String numeroCuenta) {
         return buscarPorNumero(numeroCuenta)
@@ -302,45 +238,6 @@ public HistorialResumenDTO resumenHistorial(String numeroCuenta) {
         }
         return cajero;
     }
-    
-    private void validarLimiteDiario(Cuenta cuenta, BigDecimal monto) {
-
-    LocalDate hoy = LocalDate.now();
-    String numeroCuenta = cuenta.getNumeroCuenta();
-
-    LocalDate ultimaFecha = fechaAcumulado.get(numeroCuenta);
-
-    if (ultimaFecha == null || !ultimaFecha.equals(hoy)) {
-        fechaAcumulado.put(numeroCuenta, hoy);
-        acumuladoDiario.put(numeroCuenta, BigDecimal.ZERO);
-    }
-
-    BigDecimal acumuladoActual =
-            acumuladoDiario.getOrDefault(numeroCuenta, BigDecimal.ZERO);
-
-    BigDecimal nuevoAcumulado = acumuladoActual.add(monto);
-
-    if (nuevoAcumulado.compareTo(cuenta.getLimiteRetiroDiario()) > 0) {
-        throw new IllegalArgumentException(
-                "La operacion excede el limite diario permitido");
-    }
-}
-
-private void registrarMovimientoDiario(Cuenta cuenta, BigDecimal monto) {
-
-    String numeroCuenta = cuenta.getNumeroCuenta();
-
-    acumuladoDiario.merge(
-            numeroCuenta,
-            monto,
-            BigDecimal::add
-    );
-
-    fechaAcumulado.put(
-            numeroCuenta,
-            LocalDate.now()
-    );
-}
 
     /**
      * Capitaliza el interes periodico de las cuentas de ahorro. Es la unica
@@ -385,21 +282,6 @@ private void registrarMovimientoDiario(Cuenta cuenta, BigDecimal monto) {
             cuentaRepository.save(cuenta);
         }
         persistirTransaccion(transaccion);
-    }
-
-    /**
-     * Drena la cola de notificaciones pendientes (orden FIFO). No hay
-     * endpoint que la exponga todavia -push/SMS esta fuera de alcance de
-     * este avance-, pero queda disponible para cuando se conecte un
-     * despachador real o un test que verifique el orden de generacion.
-     */
-    public List<Notificacion> obtenerNotificacionesPendientes() {
-        List<Notificacion> pendientes = new ArrayList<>();
-        Notificacion siguiente;
-        while ((siguiente = notificaciones.poll()) != null) {
-            pendientes.add(siguiente);
-        }
-        return pendientes;
     }
 
     // ==== TODO — Tarea B4 de la planeacion: reglas de negocio ====
