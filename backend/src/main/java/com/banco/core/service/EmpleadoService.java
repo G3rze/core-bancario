@@ -23,6 +23,8 @@ public interface EmpleadoService {
 
     Optional<Empleado> autenticar(String dui, String password);
 
+    Optional<Empleado> buscarPorDui(String dui);
+
     Optional<Empleado> buscarPorCodigo(String codigoEmpleado);
 
     /** Para el bootstrap: mientras no exista ningun Gerente, dar de alta empleados queda sin restriccion. */
