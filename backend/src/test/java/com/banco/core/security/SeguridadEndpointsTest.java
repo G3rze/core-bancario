@@ -2,6 +2,7 @@ package com.banco.core.security;
 
 import com.banco.core.config.CorsConfig;
 import com.banco.core.config.SecurityConfig;
+import com.banco.core.controller.AdminUsuarioController;
 import com.banco.core.controller.ClienteController;
 import com.banco.core.controller.CuentaController;
 import com.banco.core.controller.EmpleadoController;
@@ -13,6 +14,7 @@ import com.banco.core.model.entity.TipoCliente;
 import com.banco.core.service.ClienteService;
 import com.banco.core.service.CuentaService;
 import com.banco.core.service.EmpleadoService;
+import com.banco.core.service.UsuarioAdminService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -44,7 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * seguridad completa (SecurityConfig + @PreAuthorize). Los servicios van
  * mockeados: aqui solo se prueba quien puede entrar, no la logica de negocio.
  */
-@WebMvcTest({CuentaController.class, ClienteController.class, EmpleadoController.class})
+@WebMvcTest({CuentaController.class, ClienteController.class, EmpleadoController.class,
+        AdminUsuarioController.class})
 @Import({SecurityConfig.class, CorsConfig.class, JwtService.class, AutorizacionCuentasImpl.class})
 @TestPropertySource(properties = {
         "banco.jwt.secret=secreto-de-prueba-con-mas-de-32-caracteres!!",
@@ -69,6 +73,9 @@ class SeguridadEndpointsTest {
 
     @MockitoBean
     private EmpleadoService empleadoService;
+
+    @MockitoBean
+    private UsuarioAdminService usuarioAdminService;
 
     @MockitoBean
     private CargadorDeIdentidad cargadorDeIdentidad;
@@ -220,5 +227,53 @@ class SeguridadEndpointsTest {
         mockMvc.perform(post("/api/empleados").header("Authorization", bearer(DUI_OTRO, "GERENTE"))
                         .contentType(MediaType.APPLICATION_JSON).content(NUEVO_CAJERO))
                 .andExpect(status().isCreated());
+    }
+
+    // ---- admin: activar/desactivar usuarios ----
+
+    private static final String CUERPO_DESACTIVAR = "{\"activo\":false}";
+
+    @Test
+    void adminDesactivaUnUsuario() throws Exception {
+        Cliente objetivo = new Cliente(DUI_DUENO, "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL);
+        objetivo.desactivar();
+        when(usuarioAdminService.cambiarEstado(DUI_DUENO, false, DUI_OTRO)).thenReturn(List.of(objetivo));
+
+        mockMvc.perform(patch("/api/admin/usuarios/" + DUI_DUENO + "/estado")
+                        .header("Authorization", bearer(DUI_OTRO, "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CUERPO_DESACTIVAR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dui").value(DUI_DUENO))
+                .andExpect(jsonPath("$.activo").value(false))
+                .andExpect(jsonPath("$.roles[0]").value("CLIENTE"));
+    }
+
+    @Test
+    void gerenteNoPuedeCambiarElEstadoDeUsuarios() throws Exception {
+        mockMvc.perform(patch("/api/admin/usuarios/" + DUI_DUENO + "/estado")
+                        .header("Authorization", bearer(DUI_OTRO, "GERENTE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CUERPO_DESACTIVAR))
+                .andExpect(status().isForbidden());
+
+        verify(usuarioAdminService, never()).cambiarEstado(any(), org.mockito.ArgumentMatchers.anyBoolean(), any());
+    }
+
+    @Test
+    void sinTokenElCambioDeEstadoDevuelve401() throws Exception {
+        mockMvc.perform(patch("/api/admin/usuarios/" + DUI_DUENO + "/estado")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CUERPO_DESACTIVAR))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void cuerpoSinActivoDevuelve400() throws Exception {
+        mockMvc.perform(patch("/api/admin/usuarios/" + DUI_DUENO + "/estado")
+                        .header("Authorization", bearer(DUI_OTRO, "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
     }
 }
