@@ -9,7 +9,12 @@ import com.banco.core.model.entity.RegistroTransaccion;
 import com.banco.core.model.entity.TipoCliente;
 import com.banco.core.model.entity.TipoCuenta;
 import com.banco.core.service.NotificacionService;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.BeforeEach;
+import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -180,10 +185,21 @@ class CuentaServiceImplTest {
     void aplicarInteresPeriodicoIgnoraCuentaBloqueadaSinFallar() {
         Cuenta ahorros = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
         ahorros.bloquear();
+        var appender = new ListAppender<ILoggingEvent>();
+        appender.start();
+        var logger = (Logger) LoggerFactory.getLogger(CuentaServiceImpl.class);
+        logger.addAppender(appender);
 
-        cuentaService.aplicarInteresPeriodico();
+        try {
+            cuentaService.aplicarInteresPeriodico();
+        } finally {
+            logger.detachAppender(appender);
+        }
 
         assertEquals(new BigDecimal("100.00"), ahorros.getSaldo());
+        // El fallo ya no se traga en silencio: queda un WARN con la cuenta afectada.
+        assertTrue(appender.list.stream().anyMatch(e -> e.getLevel() == Level.WARN
+                && e.getFormattedMessage().contains(ahorros.getNumeroCuenta())));
     }
 
     @Test
