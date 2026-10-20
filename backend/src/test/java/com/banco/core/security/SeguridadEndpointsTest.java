@@ -397,6 +397,20 @@ class SeguridadEndpointsTest {
     }
 
     @Test
+    void exportarHistorialRespetaLaPropiedadDeLaCuenta() throws Exception {
+        when(cuentaService.historialFiltrado(numeroCuenta, null)).thenReturn(List.of());
+
+        mockMvc.perform(get(rutaProtegida() + "/transacciones/exportar")
+                        .header("Authorization", bearer(DUI_DUENO, "CLIENTE")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get(rutaProtegida() + "/transacciones/exportar")
+                        .header("Authorization", bearer(DUI_OTRO, "CLIENTE")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(rutaProtegida() + "/transacciones/exportar"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void adminNoOperaCuentas() throws Exception {
         // Decision de contrato: ADMIN gestiona usuarios, no mueve dinero ni ve cuentas.
         mockMvc.perform(get(rutaProtegida()).header("Authorization", bearer("00000000-0", "ADMIN")))

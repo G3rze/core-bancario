@@ -28,6 +28,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -145,6 +147,36 @@ class CuentaControllerTest {
                 .andExpect(jsonPath("$.error").exists());
 
         verify(cuentaService, never()).historialFiltrado(any(), any());
+    }
+
+    @Test
+    void exportarDevuelveTextoPlanoDescargable() throws Exception {
+        RegistroTransaccion deposito = new RegistroTransaccion(
+                "TRX-000001", "Deposito", new BigDecimal("50.00"), LocalDateTime.of(2026, 10, 19, 9, 0, 0),
+                "COMPLETADA", "AHO-000001", null, null, new BigDecimal("150.00"), null);
+        when(cuentaService.historialFiltrado("AHO-000001", null)).thenReturn(java.util.List.of(deposito));
+
+        mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones/exportar"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"historial-AHO-000001.txt\""))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "2026-10-19 09:00:00 | TRX-000001 | Deposito | 50.00 | 150.00 | COMPLETADA")));
+    }
+
+    @Test
+    void exportarRespetaElFiltroPorTipo() throws Exception {
+        when(cuentaService.historialFiltrado("AHO-000001", TipoTransaccion.RETIRO)).thenReturn(java.util.List.of());
+
+        mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones/exportar").param("tipo", "RETIRO"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Movimientos: 0")));
+    }
+
+    @Test
+    void exportarConTipoDesconocidoDevuelve400() throws Exception {
+        mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones/exportar").param("tipo", "giro"))
+                .andExpect(status().isBadRequest());
     }
 
     private static final String APERTURA = "{\"duiTitular\":\"12345678-9\",\"tipoCuenta\":\"%s\",\"saldoInicial\":100.00}";
