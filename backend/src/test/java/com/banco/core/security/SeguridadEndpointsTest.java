@@ -363,7 +363,7 @@ class SeguridadEndpointsTest {
         mockMvc.perform(get(rutaProtegida() + "/transacciones").header("Authorization", bearer(DUI_OTRO, "CLIENTE")))
                 .andExpect(status().isForbidden());
 
-        verify(cuentaService, never()).historial(any());
+        verify(cuentaService, never()).historialFiltrado(any(), any());
     }
 
     @Test
@@ -394,6 +394,20 @@ class SeguridadEndpointsTest {
         mockMvc.perform(get(rutaProtegida() + "/transacciones/resumen")
                         .header("Authorization", bearer(DUI_OTRO, "CLIENTE")))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void exportarHistorialRespetaLaPropiedadDeLaCuenta() throws Exception {
+        when(cuentaService.historialFiltrado(numeroCuenta, null)).thenReturn(List.of());
+
+        mockMvc.perform(get(rutaProtegida() + "/transacciones/exportar")
+                        .header("Authorization", bearer(DUI_DUENO, "CLIENTE")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get(rutaProtegida() + "/transacciones/exportar")
+                        .header("Authorization", bearer(DUI_OTRO, "CLIENTE")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(rutaProtegida() + "/transacciones/exportar"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

@@ -9,7 +9,12 @@ import com.banco.core.model.dto.TransaccionDTO;
 import com.banco.core.model.dto.TransferenciaRequest;
 import com.banco.core.security.AutorizacionCuentas;
 import com.banco.core.model.entity.TipoCuenta;
+import com.banco.core.model.entity.TipoTransaccion;
 import com.banco.core.service.CuentaService;
+import com.banco.core.util.ExportadorHistorial;
+import java.nio.charset.StandardCharsets;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
@@ -95,9 +100,26 @@ public class CuentaController {
 
     @GetMapping("/{numeroCuenta}/transacciones")
     @PreAuthorize(PUEDE_OPERAR)
-    public List<TransaccionDTO> historial(@PathVariable String numeroCuenta) {
-        return cuentaService.historial(numeroCuenta).stream()
+    public List<TransaccionDTO> historial(@PathVariable String numeroCuenta,
+                                          @RequestParam(required = false) String tipo) {
+        // Sin tipo (o en blanco) no se filtra; un tipo desconocido responde 400.
+        TipoTransaccion filtro = (tipo == null || tipo.isBlank()) ? null : TipoTransaccion.desde(tipo);
+        return cuentaService.historialFiltrado(numeroCuenta, filtro).stream()
                 .map(registro -> TransaccionDTO.desde(registro, numeroCuenta)).toList();
+    }
+
+    @GetMapping(value = "/{numeroCuenta}/transacciones/exportar", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PreAuthorize(PUEDE_OPERAR)
+    public ResponseEntity<String> exportar(@PathVariable String numeroCuenta,
+                                           @RequestParam(required = false) String tipo) {
+        TipoTransaccion filtro = (tipo == null || tipo.isBlank()) ? null : TipoTransaccion.desde(tipo);
+        String texto = ExportadorHistorial.aTexto(numeroCuenta, cuentaService.historialFiltrado(numeroCuenta, filtro));
+        // El numero ya paso por el servicio (existe), pero se sanea igual: va dentro de una cabecera HTTP.
+        String archivo = "historial-" + numeroCuenta.replaceAll("[^A-Za-z0-9_-]", "_") + ".txt";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + archivo + "\"")
+                .contentType(new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8))
+                .body(texto);
     }
 
     @GetMapping("/{numeroCuenta}/transacciones/resumen")
