@@ -30,10 +30,24 @@ public class RegistroTransaccion implements Serializable {
     private final String numeroCuentaDestino;
     // null salvo en transacciones procesadas en ventanilla.
     private final String codigoEmpleadoCajero;
+    // Se agregaron despues de que ya existian .dat: Java deserializa un campo
+    // ausente en el archivo como null, asi que los registros viejos quedan
+    // sin saldo posterior (no se inventa uno) y siguen leyendose.
+    private final BigDecimal saldoPosteriorOrigen;
+    private final BigDecimal saldoPosteriorDestino;
 
+    /** Registro sin saldos posteriores (equivale a uno leido de un .dat anterior). */
     public RegistroTransaccion(String numeroTransaccion, String tipo, BigDecimal monto, LocalDateTime fecha,
                                 String estado, String numeroCuentaOrigen, String numeroCuentaDestino,
                                 String codigoEmpleadoCajero) {
+        this(numeroTransaccion, tipo, monto, fecha, estado, numeroCuentaOrigen, numeroCuentaDestino,
+                codigoEmpleadoCajero, null, null);
+    }
+
+    public RegistroTransaccion(String numeroTransaccion, String tipo, BigDecimal monto, LocalDateTime fecha,
+                                String estado, String numeroCuentaOrigen, String numeroCuentaDestino,
+                                String codigoEmpleadoCajero, BigDecimal saldoPosteriorOrigen,
+                                BigDecimal saldoPosteriorDestino) {
         this.numeroTransaccion = numeroTransaccion;
         this.tipo = tipo;
         this.monto = monto;
@@ -42,6 +56,8 @@ public class RegistroTransaccion implements Serializable {
         this.numeroCuentaOrigen = numeroCuentaOrigen;
         this.numeroCuentaDestino = numeroCuentaDestino;
         this.codigoEmpleadoCajero = codigoEmpleadoCajero;
+        this.saldoPosteriorOrigen = saldoPosteriorOrigen;
+        this.saldoPosteriorDestino = saldoPosteriorDestino;
     }
 
     public static RegistroTransaccion desde(Transaccion transaccion) {
@@ -69,7 +85,9 @@ public class RegistroTransaccion implements Serializable {
                 transaccion.getEstado().name(),
                 origen,
                 destino,
-                transaccion.getCajero().map(Cajero::getCodigoEmpleado).orElse(null));
+                transaccion.getCajero().map(Cajero::getCodigoEmpleado).orElse(null),
+                transaccion.getSaldoPosteriorOrigen(),
+                transaccion.getSaldoPosteriorDestino());
     }
 
     public Long getId() {
@@ -118,6 +136,18 @@ public class RegistroTransaccion implements Serializable {
 
     public String getCodigoEmpleadoCajero() {
         return codigoEmpleadoCajero;
+    }
+
+    /**
+     * Saldo de {@code numeroCuenta} despues de este movimiento. En una
+     * transferencia el destino ve su propio saldo y cualquier otra cuenta el
+     * del origen. null en registros anteriores a este campo.
+     */
+    public BigDecimal saldoPosteriorDe(String numeroCuenta) {
+        if (numeroCuentaDestino != null && numeroCuentaDestino.equals(numeroCuenta)) {
+            return saldoPosteriorDestino;
+        }
+        return saldoPosteriorOrigen;
     }
 
     /** Numeros de cuenta que este registro involucra (para indexar el historial por cuenta). */

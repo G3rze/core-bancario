@@ -96,7 +96,8 @@ public class CuentaController {
     @GetMapping("/{numeroCuenta}/transacciones")
     @PreAuthorize(PUEDE_OPERAR)
     public List<TransaccionDTO> historial(@PathVariable String numeroCuenta) {
-        return cuentaService.historial(numeroCuenta).stream().map(TransaccionDTO::desde).toList();
+        return cuentaService.historial(numeroCuenta).stream()
+                .map(registro -> TransaccionDTO.desde(registro, numeroCuenta)).toList();
     }
 
     @GetMapping("/{numeroCuenta}/transacciones/resumen")

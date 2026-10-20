@@ -84,6 +84,35 @@ class CuentaControllerTest {
                 .andExpect(jsonPath("$.estado").value("COMPLETADA"));
     }
 
+    @Test
+    void historialMuestraElSaldoPosteriorDeLaCuentaConsultada() throws Exception {
+        RegistroTransaccion transferencia = new RegistroTransaccion(
+                "TRX-000002", "Transferencia", new BigDecimal("40.00"), LocalDateTime.now(),
+                "COMPLETADA", "AHO-000001", "AHO-000002", null,
+                new BigDecimal("60.00"), new BigDecimal("50.00"));
+        when(cuentaService.historial("AHO-000001")).thenReturn(java.util.List.of(transferencia));
+        when(cuentaService.historial("AHO-000002")).thenReturn(java.util.List.of(transferencia));
+
+        mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].saldoPosterior").value(60.00));
+        mockMvc.perform(get("/api/cuentas/AHO-000002/transacciones"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].saldoPosterior").value(50.00));
+    }
+
+    @Test
+    void historialDeRegistrosViejosDevuelveSaldoPosteriorNull() throws Exception {
+        RegistroTransaccion viejo = new RegistroTransaccion(
+                "TRX-000001", "Deposito", new BigDecimal("50.00"), LocalDateTime.now(),
+                "COMPLETADA", "AHO-000001", null, null);
+        when(cuentaService.historial("AHO-000001")).thenReturn(java.util.List.of(viejo));
+
+        mockMvc.perform(get("/api/cuentas/AHO-000001/transacciones"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].saldoPosterior").value(org.hamcrest.Matchers.nullValue()));
+    }
+
     private static final String APERTURA = "{\"duiTitular\":\"12345678-9\",\"tipoCuenta\":\"%s\",\"saldoInicial\":100.00}";
 
     @Test
