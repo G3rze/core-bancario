@@ -19,10 +19,6 @@
 
     <properties>
         <java.version>21</java.version>
-        <!-- El daemon Docker local exige API >= 1.40; el Testcontainers que
-             trae el BOM de Spring Boot 3.4.1 (1.20.4) hace un ping inicial
-             con una version de API mas vieja y el daemon lo rechaza. -->
-        <testcontainers.version>1.21.4</testcontainers.version>
         <jjwt.version>0.12.6</jjwt.version>
     </properties>
 
@@ -87,22 +83,13 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Postgres real y efimero para los tests de service/impl que tocan
-             JPA (Cliente/Cuenta/Empleado), en vez de H2: mismo motor que
-             produccion, sin mantener dos dialectos SQL distintos. -->
+        <!-- Base en memoria solo para los tests que tocan JPA (perfil "test",
+             ver src/test/resources/application-test.properties): asi
+             `mvn test` corre sin Docker ni Postgres. Modo PostgreSQL para
+             acercarse al dialecto real. -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

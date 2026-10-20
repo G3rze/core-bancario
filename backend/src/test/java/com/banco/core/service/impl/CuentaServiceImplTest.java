@@ -18,12 +18,9 @@ import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -41,15 +38,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * memoria de cada cuenta no se pisa entre tests aunque la fila en Postgres
  * ya se haya revertido.
  */
-@Testcontainers
 @SpringBootTest
+@ActiveProfiles("test")
 @Import(TransaccionDaoTestConfig.class)
 @Transactional
 class CuentaServiceImplTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Autowired
     private ClienteServiceImpl clienteService;
