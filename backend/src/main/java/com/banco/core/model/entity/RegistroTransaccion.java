@@ -47,19 +47,23 @@ public class RegistroTransaccion implements Serializable {
     public static RegistroTransaccion desde(Transaccion transaccion) {
         String origen;
         String destino = null;
+        TipoTransaccion tipo;
         if (transaccion instanceof Transferencia transferencia) {
             origen = transferencia.getOrigen().getNumeroCuenta();
             destino = transferencia.getDestino().getNumeroCuenta();
+            tipo = TipoTransaccion.TRANSFERENCIA;
         } else if (transaccion instanceof Deposito deposito) {
             origen = deposito.getCuenta().getNumeroCuenta();
+            tipo = TipoTransaccion.DEPOSITO;
         } else if (transaccion instanceof Retiro retiro) {
             origen = retiro.getCuenta().getNumeroCuenta();
+            tipo = TipoTransaccion.RETIRO;
         } else {
             throw new IllegalStateException("Tipo de transaccion desconocido: " + transaccion.getClass());
         }
         return new RegistroTransaccion(
                 transaccion.getNumeroTransaccion(),
-                transaccion.getClass().getSimpleName(),
+                tipo.etiqueta(),
                 transaccion.getMonto(),
                 transaccion.getFecha(),
                 transaccion.getEstado().name(),
@@ -82,6 +86,14 @@ public class RegistroTransaccion implements Serializable {
 
     public String getTipo() {
         return tipo;
+    }
+
+    /**
+     * El campo persistido sigue siendo el String (compatibilidad con los
+     * .dat ya escritos); el enum se deriva de el al consultarlo.
+     */
+    public TipoTransaccion getTipoTransaccion() {
+        return TipoTransaccion.desde(tipo);
     }
 
     public BigDecimal getMonto() {

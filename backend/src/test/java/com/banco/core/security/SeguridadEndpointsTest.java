@@ -12,6 +12,7 @@ import com.banco.core.model.entity.Cliente;
 import com.banco.core.model.entity.Cuenta;
 import com.banco.core.model.entity.CuentaAhorros;
 import com.banco.core.model.entity.TipoCliente;
+import com.banco.core.model.entity.TipoCuenta;
 import com.banco.core.model.dto.HistorialResumenDTO;
 import com.banco.core.model.dto.LoginResponse;
 import com.banco.core.model.dto.UsuarioSesionDTO;
@@ -166,7 +167,7 @@ class SeguridadEndpointsTest {
                         .contentType(MediaType.APPLICATION_JSON).content(APERTURA_A_NOMBRE_DE_OTRO))
                 .andExpect(status().isCreated());
 
-        verify(cuentaService).abrirCuenta(eq(DUI_DUENO), eq("AHORROS"), any(), any());
+        verify(cuentaService).abrirCuenta(eq(DUI_DUENO), eq(TipoCuenta.AHORROS), any(), any());
         verify(cuentaService, never()).abrirCuenta(eq(DUI_OTRO), any(), any(), any());
     }
 
@@ -178,7 +179,7 @@ class SeguridadEndpointsTest {
                         .contentType(MediaType.APPLICATION_JSON).content(APERTURA_A_NOMBRE_DE_OTRO))
                 .andExpect(status().isCreated());
 
-        verify(cuentaService).abrirCuenta(eq(DUI_OTRO), eq("AHORROS"), any(), any());
+        verify(cuentaService).abrirCuenta(eq(DUI_OTRO), eq(TipoCuenta.AHORROS), any(), any());
     }
 
     @Test
