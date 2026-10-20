@@ -32,6 +32,11 @@ public abstract class Transaccion {
     // la transaccion se construye antes de saberse si es de ventanilla.
     private Cajero cajero;
 
+    // Saldo de las cuentas justo despues de aplicar(); null hasta que la
+    // transaccion se completa. Destino solo aplica a transferencias.
+    private BigDecimal saldoPosteriorOrigen;
+    private BigDecimal saldoPosteriorDestino;
+
     protected Transaccion(BigDecimal monto) {
         if (monto == null || monto.signum() <= 0) {
             throw new IllegalArgumentException("El monto de la transaccion debe ser positivo");
@@ -61,6 +66,19 @@ public abstract class Transaccion {
     protected abstract void aplicar();
 
     /**
+     * Hook que ejecutar() llama justo despues de aplicar(), todavia dentro de
+     * la seccion critica del servicio: leer aqui el saldo garantiza que no
+     * se cuele otro movimiento entre aplicar y la lectura. Cada subtipo dice
+     * de que cuentas lo toma.
+     */
+    protected abstract void capturarSaldosPosteriores();
+
+    protected final void fijarSaldosPosteriores(BigDecimal origen, BigDecimal destino) {
+        this.saldoPosteriorOrigen = origen;
+        this.saldoPosteriorDestino = destino;
+    }
+
+    /**
      * Punto unico de ejecucion: valida, delega la mutacion real en las
      * reglas ya existentes de Cuenta (aplicar()) y deja el estado en
      * COMPLETADA o RECHAZADA segun el resultado, sin duplicar aqui las
@@ -74,6 +92,7 @@ public abstract class Transaccion {
         }
         try {
             aplicar();
+            capturarSaldosPosteriores();
             this.estado = EstadoTransaccion.COMPLETADA;
         } catch (UnsupportedOperationException e) {
             this.estado = EstadoTransaccion.RECHAZADA;
@@ -106,6 +125,14 @@ public abstract class Transaccion {
 
     public EstadoTransaccion getEstado() {
         return estado;
+    }
+
+    public BigDecimal getSaldoPosteriorOrigen() {
+        return saldoPosteriorOrigen;
+    }
+
+    public BigDecimal getSaldoPosteriorDestino() {
+        return saldoPosteriorDestino;
     }
 
     public void setCajero(Cajero cajero) {
