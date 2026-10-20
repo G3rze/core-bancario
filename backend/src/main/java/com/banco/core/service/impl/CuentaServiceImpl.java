@@ -21,6 +21,7 @@ import com.banco.core.model.entity.Transaccion;
 import com.banco.core.model.entity.Transferencia;
 import com.banco.core.service.CuentaFactory;
 import com.banco.core.service.CuentaService;
+import com.banco.core.service.HistorialService;
 import com.banco.core.service.LimiteDiarioService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
@@ -28,36 +29,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import com.banco.core.model.dto.HistorialResumenDTO;
 
 @Service
 public class CuentaServiceImpl implements CuentaService {
 
-    private static final Comparator<RegistroTransaccion> ORDEN_CRONOLOGICO =
-            Comparator.comparing(RegistroTransaccion::getFecha).thenComparing(RegistroTransaccion::getNumeroTransaccion);
-
     private final CuentaRepository cuentaRepository;
     private final ClienteRepository clienteRepository;
     private final TransaccionDAO transaccionDAO;
     private final CuentaFactory cuentaFactory;
     private final LimiteDiarioService limiteDiario;
-
-    // Map<numeroCuenta, TreeSet<RegistroTransaccion>>: el historial de una
-    // cuenta debe mostrarse en orden cronologico (HU-006); TreeSet mantiene
-    // ese orden en cada insercion en vez de tener que ordenar toda la lista
-    // en cada consulta. Sigue en memoria (no hay tabla de transacciones en
-    // Postgres, transacciones.dat es la unica fuente persistida) porque
-    // reconstruirlo leyendo el .dat completo en cada request seria mas caro
-    // que mantenerlo actualizado incrementalmente.
-    private final Map<String, TreeSet<RegistroTransaccion>> historialPorCuenta = new ConcurrentHashMap<>();
+    private final HistorialService historialService;
 
     // Queue<Notificacion>: buffer FIFO de eventos generados por las
     // transacciones. El envio real (push/SMS) esta fuera de alcance de este
@@ -69,7 +55,8 @@ public class CuentaServiceImpl implements CuentaService {
 
     public CuentaServiceImpl(CuentaRepository cuentaRepository, ClienteRepository clienteRepository,
                               TransaccionDAO transaccionDAO, CuentaFactory cuentaFactory,
-                              LimiteDiarioService limiteDiario) {
+                              LimiteDiarioService limiteDiario, HistorialService historialService) {
+        this.historialService = historialService;
         this.cuentaFactory = cuentaFactory;
         this.limiteDiario = limiteDiario;
         this.cuentaRepository = cuentaRepository;
@@ -88,7 +75,7 @@ public class CuentaServiceImpl implements CuentaService {
         // reconstruyen leyendolo completo al arrancar.
         transaccionDAO.listarTodos().forEach(registro -> {
             Transaccion.avanzarContador(registro.getNumeroTransaccion());
-            indexarEnHistorial(registro);
+            historialService.indexar(registro);
         });
     }
 
@@ -225,71 +212,28 @@ public class CuentaServiceImpl implements CuentaService {
     private RegistroTransaccion persistirTransaccion(Transaccion transaccion) {
         RegistroTransaccion registro = RegistroTransaccion.desde(transaccion);
         transaccionDAO.guardar(registro);
-        indexarEnHistorial(registro);
+        historialService.indexar(registro);
         notificaciones.add(Notificacion.deTransaccion(transaccion));
         return registro;
     }
 
-    private void indexarEnHistorial(RegistroTransaccion registro) {
-        registro.numerosCuentaInvolucradas().forEach(numeroCuenta -> {
-            TreeSet<RegistroTransaccion> historial =
-                    historialPorCuenta.computeIfAbsent(numeroCuenta, k -> new TreeSet<>(ORDEN_CRONOLOGICO));
-            synchronized (historial) {
-                historial.add(registro);
-            }
-        });
+    @Override
+    public List<RegistroTransaccion> historial(String numeroCuenta) {
+        obtenerCuenta(numeroCuenta);
+        return historialService.listar(numeroCuenta);
     }
 
     @Override
-public List<RegistroTransaccion> historial(String numeroCuenta) {
-    obtenerCuenta(numeroCuenta);
-
-    TreeSet<RegistroTransaccion> historial =
-            historialPorCuenta.get(numeroCuenta);
-
-    if (historial == null) {
-        return List.of();
+    public List<RegistroTransaccion> historialFiltrado(String numeroCuenta, TipoTransaccion tipo) {
+        obtenerCuenta(numeroCuenta);
+        return historialService.filtrar(numeroCuenta, tipo);
     }
 
-    synchronized (historial) {
-        return List.copyOf(historial);
+    @Override
+    public HistorialResumenDTO resumenHistorial(String numeroCuenta) {
+        obtenerCuenta(numeroCuenta);
+        return historialService.resumir(numeroCuenta);
     }
-}
-
-@Override
-public List<RegistroTransaccion> historialFiltrado(
-        String numeroCuenta,
-        TipoTransaccion tipo) {
-
-    return historial(numeroCuenta)
-            .stream()
-            .filter(registro ->
-                    tipo == null || registro.getTipoTransaccion() == tipo)
-            .toList();
-}
-
-@Override
-public HistorialResumenDTO resumenHistorial(String numeroCuenta) {
-
-    List<RegistroTransaccion> movimientos = historial(numeroCuenta);
-
-    BigDecimal ingresos = movimientos.stream()
-            .filter(registro ->
-                    registro.getTipoTransaccion().esIngreso())
-            .map(RegistroTransaccion::getMonto)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-    BigDecimal egresos = movimientos.stream()
-            .filter(registro ->
-                    !registro.getTipoTransaccion().esIngreso())
-            .map(RegistroTransaccion::getMonto)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-    return new HistorialResumenDTO(
-            ingresos,
-            egresos
-    );
-}
 
     private Cuenta obtenerCuenta(String numeroCuenta) {
         return buscarPorNumero(numeroCuenta)
