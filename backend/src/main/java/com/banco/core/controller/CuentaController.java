@@ -8,6 +8,7 @@ import com.banco.core.model.dto.MovimientoRequest;
 import com.banco.core.model.dto.TransaccionDTO;
 import com.banco.core.model.dto.TransferenciaRequest;
 import com.banco.core.security.AutorizacionCuentas;
+import com.banco.core.model.entity.TipoCuenta;
 import com.banco.core.service.CuentaService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -47,7 +48,7 @@ public class CuentaController {
                                                  Authentication authentication) {
         // Un CLIENTE abre siempre a su nombre: se ignora request.duiTitular().
         String duiTitular = autorizacion.titularEfectivo(request.duiTitular(), authentication);
-        var cuenta = cuentaService.abrirCuenta(duiTitular, request.tipoCuenta(),
+        var cuenta = cuentaService.abrirCuenta(duiTitular, TipoCuenta.desde(request.tipoCuenta()),
                 request.saldoInicial(), request.plazoMeses());
         return ResponseEntity.status(HttpStatus.CREATED).body(CuentaDTO.desde(cuenta));
     }

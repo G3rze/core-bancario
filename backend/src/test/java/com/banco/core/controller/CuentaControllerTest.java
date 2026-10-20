@@ -5,6 +5,7 @@ import com.banco.core.model.entity.Cuenta;
 import com.banco.core.model.entity.CuentaAhorros;
 import com.banco.core.model.entity.RegistroTransaccion;
 import com.banco.core.model.entity.TipoCliente;
+import com.banco.core.model.entity.TipoCuenta;
 import com.banco.core.security.AutorizacionCuentas;
 import com.banco.core.service.CuentaService;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -77,5 +82,31 @@ class CuentaControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.numeroTransaccion").value(deposito.getNumeroTransaccion()))
                 .andExpect(jsonPath("$.estado").value("COMPLETADA"));
+    }
+
+    private static final String APERTURA = "{\"duiTitular\":\"12345678-9\",\"tipoCuenta\":\"%s\",\"saldoInicial\":100.00}";
+
+    @Test
+    void abrirCuentaConvierteElTipoAEnumSinDistinguirMayusculas() throws Exception {
+        when(autorizacion.titularEfectivo(any(), any())).thenReturn("12345678-9");
+        when(cuentaService.abrirCuenta(any(), any(), any(), any())).thenReturn(cuentaPrueba());
+
+        mockMvc.perform(post("/api/cuentas").contentType(MediaType.APPLICATION_JSON)
+                        .content(APERTURA.formatted("ahorros")))
+                .andExpect(status().isCreated());
+
+        verify(cuentaService).abrirCuenta(eq("12345678-9"), eq(TipoCuenta.AHORROS), any(), any());
+    }
+
+    @Test
+    void abrirCuentaConTipoDesconocidoDevuelve400ConError() throws Exception {
+        when(autorizacion.titularEfectivo(any(), any())).thenReturn("12345678-9");
+
+        mockMvc.perform(post("/api/cuentas").contentType(MediaType.APPLICATION_JSON)
+                        .content(APERTURA.formatted("VIP")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+
+        verify(cuentaService, never()).abrirCuenta(any(), any(), any(), any());
     }
 }

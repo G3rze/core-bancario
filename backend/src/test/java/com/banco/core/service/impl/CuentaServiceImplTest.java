@@ -7,6 +7,7 @@ import com.banco.core.model.entity.Cuenta;
 import com.banco.core.model.entity.Notificacion;
 import com.banco.core.model.entity.RegistroTransaccion;
 import com.banco.core.model.entity.TipoCliente;
+import com.banco.core.model.entity.TipoCuenta;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,7 +63,7 @@ class CuentaServiceImplTest {
 
     @Test
     void abrirCuentaAhorrosQuedaConsultablePorNumero() {
-        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
+        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
 
         assertEquals("Cuenta de Ahorros", cuenta.getTipoCuenta());
         assertTrue(cuentaService.buscarPorNumero(cuenta.getNumeroCuenta()).isPresent());
@@ -72,18 +73,18 @@ class CuentaServiceImplTest {
     @Test
     void abrirCuentaConClienteInexistenteLanzaClienteNoEncontrado() {
         assertThrows(ClienteNoEncontradoException.class, () ->
-                cuentaService.abrirCuenta("00000000-0", "AHORROS", new BigDecimal("100.00"), null));
+                cuentaService.abrirCuenta("00000000-0", TipoCuenta.AHORROS, new BigDecimal("100.00"), null));
     }
 
     @Test
     void abrirCuentaPlazoFijoSinPlazoLanzaExcepcion() {
         assertThrows(IllegalArgumentException.class, () ->
-                cuentaService.abrirCuenta("12345678-9", "PLAZO_FIJO", new BigDecimal("500.00"), null));
+                cuentaService.abrirCuenta("12345678-9", TipoCuenta.PLAZO_FIJO, new BigDecimal("500.00"), null));
     }
 
     @Test
     void depositarActualizaSaldoYQuedaEnElHistorial() {
-        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
+        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
 
         RegistroTransaccion deposito = cuentaService.depositar(cuenta.getNumeroCuenta(), new BigDecimal("50.00"));
 
@@ -94,7 +95,7 @@ class CuentaServiceImplTest {
 
     @Test
     void retirarConSaldoInsuficienteLanzaExcepcionYNoQuedaEnHistorial() {
-        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
+        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
 
         assertThrows(SaldoInsuficienteException.class, () ->
                 cuentaService.retirar(cuenta.getNumeroCuenta(), new BigDecimal("200.00")));
@@ -104,8 +105,8 @@ class CuentaServiceImplTest {
 
     @Test
     void transferirActualizaAmbasCuentasYApareceEnAmbosHistoriales() {
-        Cuenta origen = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
-        Cuenta destino = cuentaService.abrirCuenta("12345678-9", "CORRIENTE", new BigDecimal("100.00"), null);
+        Cuenta origen = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
+        Cuenta destino = cuentaService.abrirCuenta("12345678-9", TipoCuenta.CORRIENTE, new BigDecimal("100.00"), null);
 
         cuentaService.transferir(origen.getNumeroCuenta(), destino.getNumeroCuenta(), new BigDecimal("30.00"));
 
@@ -117,7 +118,7 @@ class CuentaServiceImplTest {
 
     @Test
     void historialDevuelveLasTransaccionesEnOrdenCronologico() {
-        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", "CORRIENTE", new BigDecimal("100.00"), null);
+        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", TipoCuenta.CORRIENTE, new BigDecimal("100.00"), null);
 
         RegistroTransaccion primero = cuentaService.depositar(cuenta.getNumeroCuenta(), new BigDecimal("10.00"));
         RegistroTransaccion segundo = cuentaService.depositar(cuenta.getNumeroCuenta(), new BigDecimal("20.00"));
@@ -130,7 +131,7 @@ class CuentaServiceImplTest {
 
     @Test
     void depositarEnVentanillaDejaRegistradoElCajeroResponsable() {
-        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
+        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
         Cajero cajero = new Cajero("98765432-1", "Marta Diaz", "San Salvador", "7777-7777",
                 "Centro", "CAJA-01", "clave123");
 
@@ -143,7 +144,7 @@ class CuentaServiceImplTest {
 
     @Test
     void depositarPorBancaEnLineaNoQuedaAsociadoAUnCajero() {
-        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
+        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
 
         RegistroTransaccion deposito = cuentaService.depositar(cuenta.getNumeroCuenta(), new BigDecimal("50.00"));
 
@@ -152,7 +153,7 @@ class CuentaServiceImplTest {
 
     @Test
     void ventanillaSinCajeroLanzaExcepcion() {
-        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
+        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
 
         assertThrows(IllegalArgumentException.class, () ->
                 cuentaService.depositarEnVentanilla(cuenta.getNumeroCuenta(), new BigDecimal("50.00"), null));
@@ -160,8 +161,8 @@ class CuentaServiceImplTest {
 
     @Test
     void aplicarInteresPeriodicoCapitalizaSoloCuentasDeAhorro() {
-        Cuenta ahorros = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
-        Cuenta corriente = cuentaService.abrirCuenta("12345678-9", "CORRIENTE", new BigDecimal("100.00"), null);
+        Cuenta ahorros = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
+        Cuenta corriente = cuentaService.abrirCuenta("12345678-9", TipoCuenta.CORRIENTE, new BigDecimal("100.00"), null);
 
         cuentaService.aplicarInteresPeriodico();
 
@@ -173,7 +174,7 @@ class CuentaServiceImplTest {
 
     @Test
     void aplicarInteresPeriodicoIgnoraCuentaBloqueadaSinFallar() {
-        Cuenta ahorros = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
+        Cuenta ahorros = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
         ahorros.bloquear();
 
         cuentaService.aplicarInteresPeriodico();
@@ -183,7 +184,7 @@ class CuentaServiceImplTest {
 
     @Test
     void obtenerNotificacionesPendientesDrenaEnOrdenFifo() {
-        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", "AHORROS", new BigDecimal("100.00"), null);
+        Cuenta cuenta = cuentaService.abrirCuenta("12345678-9", TipoCuenta.AHORROS, new BigDecimal("100.00"), null);
 
         cuentaService.depositar(cuenta.getNumeroCuenta(), new BigDecimal("10.00"));
         cuentaService.depositar(cuenta.getNumeroCuenta(), new BigDecimal("20.00"));
