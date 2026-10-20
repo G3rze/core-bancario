@@ -13,10 +13,12 @@ import com.banco.core.model.entity.Empleado;
 import com.banco.core.service.EmpleadoService;
 import com.banco.core.service.impl.ClienteServiceImpl;
 import com.banco.core.service.impl.CuentaServiceImpl;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/ventanilla")
+@PreAuthorize("hasAnyRole('CAJERO','GERENTE')")
 public class VentanillaController {
 
     private final ClienteServiceImpl clienteService;
