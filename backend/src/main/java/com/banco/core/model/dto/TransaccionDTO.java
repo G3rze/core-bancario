@@ -6,6 +6,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
+ * {@code comprobante} es el texto de Transaccion.generarComprobante(); null en
+ * movimientos anteriores a que se guardara.
  * {@code saldoPosterior} es el saldo de la cuenta desde la que se mira el
  * movimiento; null en movimientos anteriores a que se guardara este dato.
  */
@@ -16,7 +18,8 @@ public record TransaccionDTO(
         LocalDateTime fecha,
         String estado,
         String codigoEmpleadoCajero,
-        BigDecimal saldoPosterior) {
+        BigDecimal saldoPosterior,
+        String comprobante) {
 
     /** Respuesta de una operacion: se mira desde la cuenta de origen. */
     public static TransaccionDTO desde(RegistroTransaccion registro) {
@@ -32,6 +35,7 @@ public record TransaccionDTO(
                 registro.getFecha(),
                 registro.getEstado(),
                 registro.getCodigoEmpleadoCajero(),
-                registro.saldoPosteriorDe(numeroCuenta));
+                registro.saldoPosteriorDe(numeroCuenta),
+                registro.getComprobante());
     }
 }

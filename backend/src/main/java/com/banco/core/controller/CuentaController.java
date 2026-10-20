@@ -55,7 +55,7 @@ public class CuentaController {
         String duiTitular = autorizacion.titularEfectivo(request.duiTitular(), authentication);
         var cuenta = cuentaService.abrirCuenta(duiTitular, TipoCuenta.desde(request.tipoCuenta()),
                 request.saldoInicial(), request.plazoMeses());
-        return ResponseEntity.status(HttpStatus.CREATED).body(CuentaDTO.desde(cuenta));
+        return ResponseEntity.status(HttpStatus.CREATED).body(CuentaDTO.deApertura(cuenta));
     }
 
     /** Cuentas del cliente autenticado (declarada antes que /{numeroCuenta}; ademas Spring prefiere la ruta literal). */
