@@ -19,6 +19,7 @@ import com.banco.core.model.entity.TipoTransaccion;
 import com.banco.core.model.entity.Retiro;
 import com.banco.core.model.entity.Transaccion;
 import com.banco.core.model.entity.Transferencia;
+import com.banco.core.service.CuentaFactory;
 import com.banco.core.service.CuentaService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class CuentaServiceImpl implements CuentaService {
     private final CuentaRepository cuentaRepository;
     private final ClienteRepository clienteRepository;
     private final TransaccionDAO transaccionDAO;
+    private final CuentaFactory cuentaFactory;
 
     // Map<numeroCuenta, TreeSet<RegistroTransaccion>>: el historial de una
     // cuenta debe mostrarse en orden cronologico (HU-006); TreeSet mantiene
@@ -68,7 +70,8 @@ private final Map<String, BigDecimal> acumuladoDiario = new ConcurrentHashMap<>(
 private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
 
     public CuentaServiceImpl(CuentaRepository cuentaRepository, ClienteRepository clienteRepository,
-                              TransaccionDAO transaccionDAO) {
+                              TransaccionDAO transaccionDAO, CuentaFactory cuentaFactory) {
+        this.cuentaFactory = cuentaFactory;
         this.cuentaRepository = cuentaRepository;
         this.clienteRepository = clienteRepository;
         this.transaccionDAO = transaccionDAO;
@@ -103,27 +106,9 @@ private final Map<String, LocalDate> fechaAcumulado = new ConcurrentHashMap<>();
     public Cuenta abrirCuenta(String duiTitular, TipoCuenta tipoCuenta, BigDecimal saldoInicial, Integer plazoMeses) {
         Cliente titular = clienteRepository.findByDui(duiTitular)
                 .orElseThrow(() -> ClienteNoEncontradoException.porDui(duiTitular));
-        Cuenta cuenta = crearCuenta(tipoCuenta, titular, saldoInicial, plazoMeses);
+        Cuenta cuenta = cuentaFactory.crear(tipoCuenta, titular, saldoInicial, plazoMeses);
         titular.agregarCuenta(cuenta);
         return cuentaRepository.save(cuenta);
-    }
-
-    private Cuenta crearCuenta(TipoCuenta tipoCuenta, Cliente titular, BigDecimal saldoInicial, Integer plazoMeses) {
-        if (tipoCuenta == null) {
-            throw new IllegalArgumentException("El tipo de cuenta es obligatorio");
-        }
-        // Sin default: si se agrega un TipoCuenta, el compilador obliga a
-        // decidir aqui como se crea.
-        return switch (tipoCuenta) {
-            case AHORROS -> new CuentaAhorros(titular, saldoInicial);
-            case CORRIENTE -> new CuentaCorriente(titular, saldoInicial);
-            case PLAZO_FIJO -> {
-                if (plazoMeses == null) {
-                    throw new IllegalArgumentException("Una cuenta a plazo fijo requiere un plazo en meses");
-                }
-                yield new CuentaPlazoFijo(titular, saldoInicial, plazoMeses);
-            }
-        };
     }
 
     @Override
