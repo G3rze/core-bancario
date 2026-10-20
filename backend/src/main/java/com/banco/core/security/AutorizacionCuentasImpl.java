@@ -43,6 +43,17 @@ public class AutorizacionCuentasImpl implements AutorizacionCuentas {
                 .orElse(false);
     }
 
+    @Override
+    public String titularEfectivo(String duiSolicitado, Authentication autenticacion) {
+        if (tieneAlgunRol(autenticacion, Set.of(ROL_CLIENTE))) {
+            return autenticacion.getName();
+        }
+        if (duiSolicitado == null || duiSolicitado.isBlank()) {
+            throw new IllegalArgumentException("El DUI del titular es obligatorio");
+        }
+        return duiSolicitado;
+    }
+
     private boolean tieneAlgunRol(Authentication autenticacion, Set<String> roles) {
         for (GrantedAuthority autoridad : autenticacion.getAuthorities()) {
             if (roles.contains(autoridad.getAuthority())) {

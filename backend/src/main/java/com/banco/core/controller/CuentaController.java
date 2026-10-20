@@ -7,8 +7,10 @@ import com.banco.core.model.dto.HistorialResumenDTO;
 import com.banco.core.model.dto.MovimientoRequest;
 import com.banco.core.model.dto.TransaccionDTO;
 import com.banco.core.model.dto.TransferenciaRequest;
+import com.banco.core.security.AutorizacionCuentas;
 import com.banco.core.service.CuentaService;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,16 +34,29 @@ public class CuentaController {
 
     private final CuentaService cuentaService;
 
-    public CuentaController(CuentaService cuentaService) {
+    private final AutorizacionCuentas autorizacion;
+
+    public CuentaController(CuentaService cuentaService, AutorizacionCuentas autorizacion) {
         this.cuentaService = cuentaService;
+        this.autorizacion = autorizacion;
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('CLIENTE','CAJERO')")
-    public ResponseEntity<CuentaDTO> abrirCuenta(@RequestBody AperturaCuentaRequest request) {
-        var cuenta = cuentaService.abrirCuenta(request.duiTitular(), request.tipoCuenta(),
+    public ResponseEntity<CuentaDTO> abrirCuenta(@RequestBody AperturaCuentaRequest request,
+                                                 Authentication authentication) {
+        // Un CLIENTE abre siempre a su nombre: se ignora request.duiTitular().
+        String duiTitular = autorizacion.titularEfectivo(request.duiTitular(), authentication);
+        var cuenta = cuentaService.abrirCuenta(duiTitular, request.tipoCuenta(),
                 request.saldoInicial(), request.plazoMeses());
         return ResponseEntity.status(HttpStatus.CREATED).body(CuentaDTO.desde(cuenta));
+    }
+
+    /** Cuentas del cliente autenticado (declarada antes que /{numeroCuenta}; ademas Spring prefiere la ruta literal). */
+    @GetMapping("/mias")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public List<CuentaDTO> misCuentas(Authentication authentication) {
+        return cuentaService.listarPorCliente(authentication.getName()).stream().map(CuentaDTO::desde).toList();
     }
 
     @GetMapping("/{numeroCuenta}")

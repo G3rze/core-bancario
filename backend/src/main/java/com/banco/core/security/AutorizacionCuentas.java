@@ -16,4 +16,13 @@ public interface AutorizacionCuentas {
      * o una peticion sin autenticar: false.
      */
     boolean puedeOperar(String numeroCuenta, Authentication autenticacion);
+
+    /**
+     * Titular al que se abre una cuenta: para un CLIENTE siempre el del
+     * token (el DUI del body se ignora, nadie abre cuentas a nombre de otro);
+     * para el personal, el DUI que indica la peticion.
+     *
+     * @throws IllegalArgumentException si el personal no indica DUI
+     */
+    String titularEfectivo(String duiSolicitado, Authentication autenticacion);
 }

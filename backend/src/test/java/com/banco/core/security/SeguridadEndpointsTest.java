@@ -30,11 +30,13 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -125,6 +127,61 @@ class SeguridadEndpointsTest {
     void cajeroVeCualquierCuenta() throws Exception {
         mockMvc.perform(get("/api/cuentas/" + numeroCuenta).header("Authorization", bearer(DUI_OTRO, "CAJERO")))
                 .andExpect(status().isOk());
+    }
+
+    // ---- apertura y /mias ----
+
+    private static final String APERTURA_A_NOMBRE_DE_OTRO = """
+            {"duiTitular":"98765432-1","tipoCuenta":"AHORROS","saldoInicial":100.00}
+            """;
+
+    private Cuenta cuentaRecienAbierta() {
+        Cliente titular = new Cliente(DUI_DUENO, "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL);
+        return new CuentaAhorros(titular, new BigDecimal("100.00"));
+    }
+
+    @Test
+    void clienteAbreCuentaSiempreASuNombreIgnorandoElDuiDelBody() throws Exception {
+        when(cuentaService.abrirCuenta(any(), any(), any(), any())).thenReturn(cuentaRecienAbierta());
+
+        mockMvc.perform(post("/api/cuentas").header("Authorization", bearer(DUI_DUENO, "CLIENTE"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APERTURA_A_NOMBRE_DE_OTRO))
+                .andExpect(status().isCreated());
+
+        verify(cuentaService).abrirCuenta(eq(DUI_DUENO), eq("AHORROS"), any(), any());
+        verify(cuentaService, never()).abrirCuenta(eq(DUI_OTRO), any(), any(), any());
+    }
+
+    @Test
+    void cajeroAbreCuentaAlDuiIndicado() throws Exception {
+        when(cuentaService.abrirCuenta(any(), any(), any(), any())).thenReturn(cuentaRecienAbierta());
+
+        mockMvc.perform(post("/api/cuentas").header("Authorization", bearer("55555555-5", "CAJERO"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APERTURA_A_NOMBRE_DE_OTRO))
+                .andExpect(status().isCreated());
+
+        verify(cuentaService).abrirCuenta(eq(DUI_OTRO), eq("AHORROS"), any(), any());
+    }
+
+    @Test
+    void misCuentasDevuelveSoloLasDelClienteAutenticado() throws Exception {
+        Cuenta cuenta = cuentaRecienAbierta();
+        when(cuentaService.listarPorCliente(DUI_DUENO)).thenReturn(List.of(cuenta));
+
+        mockMvc.perform(get("/api/cuentas/mias").header("Authorization", bearer(DUI_DUENO, "CLIENTE")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].numeroCuenta").value(cuenta.getNumeroCuenta()));
+
+        verify(cuentaService).listarPorCliente(DUI_DUENO);
+        verify(cuentaService, never()).listarPorCliente(DUI_OTRO);
+    }
+
+    @Test
+    void misCuentasEsSoloParaClientesYRequiereToken() throws Exception {
+        mockMvc.perform(get("/api/cuentas/mias").header("Authorization", bearer(DUI_OTRO, "CAJERO")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/cuentas/mias"))
+                .andExpect(status().isUnauthorized());
     }
 
     // ---- listados: solo personal ----

@@ -17,7 +17,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -79,5 +81,24 @@ class AutorizacionCuentasImplTest {
 
         assertFalse(autorizacion.puedeOperar(numeroCuenta, null));
         assertFalse(autorizacion.puedeOperar(numeroCuenta, anonimo));
+    }
+
+    @Test
+    void clienteAbreSiempreASuNombreAunqueIndiqueOtroDui() {
+        assertEquals(DUI_DUENO, autorizacion.titularEfectivo(DUI_OTRO, como(DUI_DUENO, "CLIENTE")));
+        assertEquals(DUI_DUENO, autorizacion.titularEfectivo(null, como(DUI_DUENO, "CLIENTE")));
+    }
+
+    @Test
+    void personalAbreAlDuiQueIndica() {
+        assertEquals(DUI_DUENO, autorizacion.titularEfectivo(DUI_DUENO, como(DUI_OTRO, "CAJERO")));
+    }
+
+    @Test
+    void personalSinDuiDelTitularEsUnaSolicitudInvalida() {
+        assertThrows(IllegalArgumentException.class,
+                () -> autorizacion.titularEfectivo(" ", como(DUI_OTRO, "CAJERO")));
+        assertThrows(IllegalArgumentException.class,
+                () -> autorizacion.titularEfectivo(null, como(DUI_OTRO, "CAJERO")));
     }
 }
