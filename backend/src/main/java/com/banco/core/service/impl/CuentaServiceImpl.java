@@ -5,6 +5,7 @@ import com.banco.core.dao.ClienteRepository;
 import com.banco.core.dao.TransaccionDAO;
 import com.banco.core.exception.ClienteNoEncontradoException;
 import com.banco.core.exception.CuentaNoEncontradaException;
+import com.banco.core.model.dto.HistorialResumenDTO;
 import com.banco.core.model.entity.Cajero;
 import com.banco.core.model.entity.Cliente;
 import com.banco.core.model.entity.Cuenta;
@@ -24,16 +25,19 @@ import com.banco.core.service.HistorialService;
 import com.banco.core.service.LimiteDiarioService;
 import com.banco.core.service.NotificacionService;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import com.banco.core.model.dto.HistorialResumenDTO;
 
 @Service
 public class CuentaServiceImpl implements CuentaService {
+
+    private static final Logger log = LoggerFactory.getLogger(CuentaServiceImpl.class);
 
     private final CuentaRepository cuentaRepository;
     private final ClienteRepository clienteRepository;
@@ -142,23 +146,19 @@ public class CuentaServiceImpl implements CuentaService {
     }
 
     private RegistroTransaccion retirar(String numeroCuenta, BigDecimal monto, Cajero cajero) {
-    Cuenta cuenta = obtenerCuenta(numeroCuenta);
-    Transaccion transaccion = new Retiro(cuenta, monto);
-    transaccion.setCajero(cajero);
+        Cuenta cuenta = obtenerCuenta(numeroCuenta);
+        Transaccion transaccion = new Retiro(cuenta, monto);
+        transaccion.setCajero(cajero);
 
-    synchronized (cuenta) {
+        synchronized (cuenta) {
+            limiteDiario.validar(cuenta, monto);
+            transaccion.ejecutar();
+            limiteDiario.registrar(cuenta, monto);
+            cuentaRepository.save(cuenta);
+        }
 
-        limiteDiario.validar(cuenta, monto);
-
-        transaccion.ejecutar();
-
-        limiteDiario.registrar(cuenta, monto);
-
-        cuentaRepository.save(cuenta);
+        return persistirTransaccion(transaccion);
     }
-
-    return persistirTransaccion(transaccion);
-}
 
     @Override
     @Transactional
@@ -186,18 +186,14 @@ public class CuentaServiceImpl implements CuentaService {
         Cuenta primero = origen.getNumeroCuenta().compareTo(destino.getNumeroCuenta()) <= 0 ? origen : destino;
         Cuenta segundo = primero == origen ? destino : origen;
         synchronized (primero) {
-    synchronized (segundo) {
-
-        limiteDiario.validar(origen, monto);
-
-        transaccion.ejecutar();
-
-        limiteDiario.registrar(origen, monto);
-
-        cuentaRepository.save(origen);
-        cuentaRepository.save(destino);
-    }
-}
+            synchronized (segundo) {
+                limiteDiario.validar(origen, monto);
+                transaccion.ejecutar();
+                limiteDiario.registrar(origen, monto);
+                cuentaRepository.save(origen);
+                cuentaRepository.save(destino);
+            }
+        }
         return persistirTransaccion(transaccion);
     }
 
@@ -265,7 +261,10 @@ public class CuentaServiceImpl implements CuentaService {
             try {
                 aplicarInteres(cuenta);
             } catch (RuntimeException e) {
-                // Se reintenta en la siguiente corrida del scheduler.
+                // Se reintenta en la siguiente corrida del scheduler; se deja
+                // rastro para poder ver por que una cuenta no capitaliza.
+                log.warn("No se pudo capitalizar el interes de la cuenta {}: {}",
+                        cuenta.getNumeroCuenta(), e.getMessage());
             }
         }
     }
@@ -283,31 +282,4 @@ public class CuentaServiceImpl implements CuentaService {
         }
         persistirTransaccion(transaccion);
     }
-
-    // ==== TODO — Tarea B4 de la planeacion: reglas de negocio ====
-    // Cuenta ya valida el deposito minimo de apertura y un limite POR
-    // TRANSACCION de retiro (ver Cuenta.java: montoMinimoApertura /
-    // limiteRetiroDiario), pero nadie acumula cuanto se ha retirado o
-    // transferido en el dia -hoy se puede retirar el limite completo varias
-    // veces seguidas el mismo dia-. Para completar HU-004/HU-005 de verdad:
-    //   1. Agregar un registro por cuenta de "monto movido hoy" (por
-    //      ejemplo Map<LocalDate, BigDecimal> o un par fecha/acumulado que
-    //      se reinicia al cambiar el dia).
-    //   2. Validar ese acumulado antes de transaccion.ejecutar() en
-    //      retirar()/transferir(), sumando el monto de la operacion actual.
-    //   3. Decidir si ese estado vive en Cuenta (columna nueva en Postgres,
-    //      mas cohesivo con las validaciones que ya tiene) o aqui en el
-    //      service (en memoria, mas simple pero se pierde al reiniciar).
-
-    // ==== TODO — Tarea B5 de la planeacion: historial (HU-006) ====
-    // historial(numeroCuenta) de arriba devuelve todo el historial sin
-    // filtrar. Falta:
-    //   1. Filtrar por tipo de transaccion (RegistroTransaccion.getTipo()
-    //      ya trae "Deposito"/"Retiro"/"Transferencia" como String) -
-    //      probablemente agregando un parametro a este metodo o uno nuevo
-    //      en la interfaz CuentaService.
-    //   2. Un resumen de ingresos vs. egresos para el DTO que consuma el
-    //      frontend.
-    // El TreeSet ya esta ordenado cronologicamente, asi que ambos son un
-    // filter()/reduce() sobre la lista que ya devuelve historial().
 }
