@@ -25,6 +25,9 @@ public interface ClienteService {
 
     Optional<Cliente> buscarPorDui(String dui);
 
+    /** Busqueda combinada para ventanilla (HU-007): por DUI o por numero de cliente. */
+    Optional<Cliente> buscarPorDuiONumeroCliente(String identificador);
+
     List<Cliente> listarTodos();
 
     /** Cliente cuyo DUI y contrasena coinciden; vacio si no existe o la clave no corresponde. */
