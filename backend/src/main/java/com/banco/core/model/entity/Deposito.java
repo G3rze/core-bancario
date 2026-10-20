@@ -25,6 +25,11 @@ public class Deposito extends Transaccion {
     }
 
     @Override
+    protected void capturarSaldosPosteriores() {
+        fijarSaldosPosteriores(cuenta.getSaldo(), null);
+    }
+
+    @Override
     public String generarComprobante() {
         return "Deposito %s | Cuenta %s | Monto %s | Estado %s".formatted(
                 getNumeroTransaccion(), cuenta.getNumeroCuenta(), getMonto(), getEstado());

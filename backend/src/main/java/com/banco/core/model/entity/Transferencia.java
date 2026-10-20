@@ -30,6 +30,11 @@ public class Transferencia extends Transaccion {
     }
 
     @Override
+    protected void capturarSaldosPosteriores() {
+        fijarSaldosPosteriores(origen.getSaldo(), destino.getSaldo());
+    }
+
+    @Override
     public String generarComprobante() {
         return "Transferencia %s | De %s a %s | Monto %s | Estado %s".formatted(
                 getNumeroTransaccion(), origen.getNumeroCuenta(), destino.getNumeroCuenta(),

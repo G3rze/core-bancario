@@ -1,5 +1,6 @@
 package com.banco.core.controller;
 
+import com.banco.core.exception.AccesoNoAutorizadoException;
 import com.banco.core.exception.ClienteNoEncontradoException;
 import com.banco.core.exception.EmpleadoNoEncontradoException;
 import com.banco.core.model.dto.ClienteConCuentasDTO;
@@ -10,22 +11,29 @@ import com.banco.core.model.dto.VentanillaMovimientoRequest;
 import com.banco.core.model.dto.VentanillaTransferenciaRequest;
 import com.banco.core.model.entity.Cajero;
 import com.banco.core.model.entity.Empleado;
+import com.banco.core.service.ClienteService;
+import com.banco.core.service.CuentaService;
 import com.banco.core.service.EmpleadoService;
-import com.banco.core.service.impl.ClienteServiceImpl;
-import com.banco.core.service.impl.CuentaServiceImpl;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/ventanilla")
+@PreAuthorize("hasAnyRole('CAJERO','GERENTE')")
 public class VentanillaController {
 
-    private final ClienteServiceImpl clienteService;
-    private final CuentaServiceImpl cuentaService;
+    // Un movimiento de ventanilla queda firmado por un Cajero (Transaccion
+    // guarda un Cajero), asi que el GERENTE solo consulta; no mueve dinero.
+    private static final String SOLO_CAJERO = "hasRole('CAJERO')";
+
+    private final ClienteService clienteService;
+    private final CuentaService cuentaService;
     private final EmpleadoService empleadoService;
 
     public VentanillaController(
-            ClienteServiceImpl clienteService,
-            CuentaServiceImpl cuentaService,
+            ClienteService clienteService,
+            CuentaService cuentaService,
             EmpleadoService empleadoService) {
 
         this.clienteService = clienteService;
@@ -53,13 +61,15 @@ public class VentanillaController {
     }
 
     @PostMapping("/cuentas/{numeroCuenta}/depositos")
+    @PreAuthorize(SOLO_CAJERO)
     public TransaccionDTO depositar(
             @PathVariable String numeroCuenta,
-            @RequestBody VentanillaMovimientoRequest request) {
+            @RequestBody VentanillaMovimientoRequest request,
+            Authentication authentication) {
 
-        Cajero cajero = resolverCajero(request.codigoEmpleadoCajero());
+        Cajero cajero = resolverCajero(authentication);
 
-        return TransaccionDTO.desde(
+        return TransaccionDTO.deVentanilla(
                 cuentaService.depositarEnVentanilla(
                         numeroCuenta,
                         request.monto(),
@@ -69,13 +79,15 @@ public class VentanillaController {
     }
 
     @PostMapping("/cuentas/{numeroCuenta}/retiros")
+    @PreAuthorize(SOLO_CAJERO)
     public TransaccionDTO retirar(
             @PathVariable String numeroCuenta,
-            @RequestBody VentanillaMovimientoRequest request) {
+            @RequestBody VentanillaMovimientoRequest request,
+            Authentication authentication) {
 
-        Cajero cajero = resolverCajero(request.codigoEmpleadoCajero());
+        Cajero cajero = resolverCajero(authentication);
 
-        return TransaccionDTO.desde(
+        return TransaccionDTO.deVentanilla(
                 cuentaService.retirarEnVentanilla(
                         numeroCuenta,
                         request.monto(),
@@ -85,13 +97,15 @@ public class VentanillaController {
     }
 
     @PostMapping("/cuentas/{numeroCuenta}/transferencias")
+    @PreAuthorize(SOLO_CAJERO)
     public TransaccionDTO transferir(
             @PathVariable String numeroCuenta,
-            @RequestBody VentanillaTransferenciaRequest request) {
+            @RequestBody VentanillaTransferenciaRequest request,
+            Authentication authentication) {
 
-        Cajero cajero = resolverCajero(request.codigoEmpleadoCajero());
+        Cajero cajero = resolverCajero(authentication);
 
-        return TransaccionDTO.desde(
+        return TransaccionDTO.deVentanilla(
                 cuentaService.transferirEnVentanilla(
                         numeroCuenta,
                         request.numeroCuentaDestino(),
@@ -101,16 +115,21 @@ public class VentanillaController {
         );
     }
 
-    private Cajero resolverCajero(String codigoEmpleado) {
+    /**
+     * El cajero sale del token, no del body: asi nadie puede registrar un
+     * movimiento a nombre de otro empleado.
+     */
+    private Cajero resolverCajero(Authentication authentication) {
+
+        String dui = authentication.getName();
 
         Empleado empleado = empleadoService
-                .buscarPorCodigo(codigoEmpleado)
-                .orElseThrow(() ->
-                        EmpleadoNoEncontradoException.porCodigo(codigoEmpleado));
+                .buscarPorDui(dui)
+                .orElseThrow(() -> EmpleadoNoEncontradoException.porDui(dui));
 
         if (!(empleado instanceof Cajero cajero)) {
-            throw new IllegalArgumentException(
-                    "El empleado indicado no es un cajero");
+            throw new AccesoNoAutorizadoException(
+                    "Solo un cajero puede operar en ventanilla");
         }
 
         return cajero;

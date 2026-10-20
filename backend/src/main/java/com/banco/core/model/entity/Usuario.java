@@ -6,6 +6,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -48,6 +50,14 @@ public abstract class Usuario {
     @Column(nullable = false)
     private boolean activo;
 
+    // Nullable a proposito: ya existen clientes en la base sin contrasena
+    // (ddl-auto=update no puede agregar una columna NOT NULL a filas
+    // previas). Un usuario sin hash simplemente no puede iniciar sesion.
+    // Sin getter publico: el hash no sale de la entidad, se verifica con
+    // validarPassword().
+    @Column(name = "password_hash")
+    private String passwordHash;
+
     protected Usuario(String dui, String nombre, String direccion, String telefono) {
         setDui(dui);
         setNombre(nombre);
@@ -62,7 +72,27 @@ public abstract class Usuario {
         this.fechaRegistro = null;
     }
 
-    public abstract String getRol();
+    public abstract Rol getRol();
+
+    /**
+     * Recibe el hash ya calculado (BCrypt): codificar es responsabilidad del
+     * servicio que conoce el PasswordEncoder, la entidad solo lo guarda.
+     */
+    public void setPasswordHash(String passwordHash) {
+        if (passwordHash == null || passwordHash.isBlank()) {
+            throw new IllegalArgumentException("El hash de la contrasena no puede estar vacio");
+        }
+        this.passwordHash = passwordHash;
+    }
+
+    public boolean tienePassword() {
+        return passwordHash != null;
+    }
+
+    public boolean validarPassword(String intento, PasswordEncoder encoder) {
+        return intento != null && passwordHash != null && encoder.matches(intento, passwordHash);
+    }
+
 
     public void setDui(String dui) {
         if (dui == null || !PATRON_DUI.matcher(dui).matches()) {

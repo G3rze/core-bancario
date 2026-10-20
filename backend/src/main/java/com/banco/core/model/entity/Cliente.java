@@ -94,7 +94,7 @@ public class Cliente extends Usuario {
     }
 
     @Override
-    public String getRol() {
-        return "CLIENTE";
+    public Rol getRol() {
+        return Rol.CLIENTE;
     }
 }

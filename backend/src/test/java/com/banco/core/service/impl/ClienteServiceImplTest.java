@@ -5,12 +5,9 @@ import com.banco.core.model.entity.TipoCliente;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,15 +21,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * revertida al final -aisla los datos entre tests sin tener que inventar un
  * DUI distinto por metodo, y sin necesidad de limpiar la tabla a mano-.
  */
-@Testcontainers
 @SpringBootTest
+@ActiveProfiles("test")
 @Import(TransaccionDaoTestConfig.class)
 @Transactional
 class ClienteServiceImplTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Autowired
     private ClienteServiceImpl clienteService;
@@ -46,6 +39,31 @@ class ClienteServiceImplTest {
         Optional<Cliente> recuperado = clienteService.buscarPorDui("12345678-9");
         assertTrue(recuperado.isPresent());
         assertEquals(cliente.getNumeroCliente(), recuperado.get().getNumeroCliente());
+    }
+
+    @Test
+    void registrarConPasswordGuardaElHashYPermiteAutenticar() {
+        clienteService.registrar("12345678-9", "Ana Lopez", "San Salvador", "7777-7777",
+                TipoCliente.NATURAL, "clave123");
+
+        assertTrue(clienteService.autenticar("12345678-9", "clave123").isPresent());
+        assertTrue(clienteService.autenticar("12345678-9", "otraClave").isEmpty());
+        assertTrue(clienteService.buscarPorDui("12345678-9").orElseThrow().tienePassword());
+    }
+
+    @Test
+    void registrarConPasswordCortaLanzaExcepcionYNoPersiste() {
+        assertThrows(IllegalArgumentException.class, () -> clienteService.registrar(
+                "12345678-9", "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL, "123"));
+
+        assertTrue(clienteService.buscarPorDui("12345678-9").isEmpty());
+    }
+
+    @Test
+    void registrarSinPasswordDejaAlClienteSinCredenciales() {
+        clienteService.registrar("12345678-9", "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL);
+
+        assertTrue(clienteService.autenticar("12345678-9", "clave123").isEmpty());
     }
 
     @Test

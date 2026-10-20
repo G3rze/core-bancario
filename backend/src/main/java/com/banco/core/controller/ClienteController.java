@@ -4,6 +4,7 @@ import com.banco.core.exception.ClienteNoEncontradoException;
 import com.banco.core.model.dto.ClienteDTO;
 import com.banco.core.model.dto.NuevoClienteRequest;
 import com.banco.core.service.ClienteService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,8 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+// Datos de clientes: solo personal del banco. El cliente ve lo suyo por /api/cuentas/mias.
 @RestController
 @RequestMapping("/api/clientes")
+@PreAuthorize("hasAnyRole('CAJERO','GERENTE')")
 public class ClienteController {
 
     private final ClienteService clienteService;

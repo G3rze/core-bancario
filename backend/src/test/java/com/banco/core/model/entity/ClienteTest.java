@@ -24,7 +24,7 @@ class ClienteTest {
     void aceptaDatosValidosYAsignaNumeroDeCliente() {
         Cliente cliente = new Cliente("12345678-9", "Ana Lopez", "San Salvador", "7777-7777", TipoCliente.NATURAL);
 
-        assertEquals("CLIENTE", cliente.getRol());
+        assertEquals(Rol.CLIENTE, cliente.getRol());
         assertTrue(cliente.getNumeroCliente().startsWith("CLI-"));
     }
 
