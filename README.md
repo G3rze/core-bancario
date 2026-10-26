@@ -18,10 +18,45 @@ Proyecto academico para la materia Programacion II (POO), Universidad Evangelica
 core-bancario/
 ├── backend/    # API REST en Spring Boot
 ├── frontend/   # Aplicacion Angular
-└── docs/       # Documentacion del proyecto
+├── docs/       # Documentacion del proyecto (incl. manual de usuario)
+└── docker-compose.yml
 ```
 
-## Variables de entorno
+## Correr todo con Docker (recomendado)
+
+Solo necesitas Docker con Compose. Levanta Postgres, el backend y el
+frontend (nginx) con un comando:
+
+```bash
+cp .env.example .env      # edita JWT_SECRET y las claves BOOTSTRAP_*
+docker compose up -d --build
+```
+
+Cuando termine (el backend tarda unos segundos en arrancar):
+
+- Aplicacion: <http://localhost:4200> (cambia el puerto con `WEB_PORT` en `.env`)
+- Entra como gerente o admin con las credenciales `BOOTSTRAP_*` del `.env`
+  (por defecto `00000001-1` y `00000002-2`); los clientes se registran en `/registro`.
+- Los datos viven en volumenes de Docker (`pgdata` para Postgres, `datos` para el
+  log de transacciones) y sobreviven a `docker compose down`.
+
+Comandos utiles:
+
+```bash
+docker compose logs -f backend   # ver el log del backend
+docker compose down              # detener (conserva los datos)
+docker compose down -v           # detener y borrar todos los datos
+```
+
+El frontend sirve la API desde el mismo origen (`/api` se reenvia al backend),
+asi que no hace falta configurar CORS para este modo.
+
+## Correr sin Docker (desarrollo)
+
+Necesitas Java 21, Maven, Node 22 y un Postgres local con la base
+`core_bancario` creada.
+
+## Variables de entorno (backend sin Docker)
 
 El backend lee configuracion (puerto, CORS, log, Postgres, JWT y usuarios
 iniciales) desde `backend/.env`, cargado automaticamente al arrancar (via
