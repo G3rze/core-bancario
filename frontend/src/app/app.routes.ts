@@ -1,32 +1,40 @@
 import { Routes } from '@angular/router';
+
+import { AdminUsuarios } from './components/admin-usuarios/admin-usuarios';
 import { ClienteLista } from './components/cliente-lista/cliente-lista';
 import { CrearCliente } from './components/crear-cliente/crear-cliente';
 import { CrearEmpleado } from './components/crear-empleado/crear-empleado';
+import { CuentaDetalle } from './components/cuenta-detalle/cuenta-detalle';
 import { Login } from './components/login/login';
 import { MisCuentas } from './components/mis-cuentas/mis-cuentas';
-import { CuentaDetalle } from './components/cuenta-detalle/cuenta-detalle';
 import { Registro } from './components/registro/registro';
 import { Ventanilla } from './components/ventanilla/ventanilla';
 import { rolGuard } from './guards/rol.guard';
-import { AperturaCuenta } from './components/apertura-cuenta/apertura-cuenta';
-import { Deposito } from './components/deposito/deposito';
-import { Retiro } from './components/retiro/retiro';
-import { Transferencia } from './components/transferencia/transferencia';
-import { Historial } from './components/historial/historial';
+import { inicioGuard } from './guards/inicio.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'clientes', pathMatch: 'full' },
-  { path: 'clientes', component: ClienteLista },
-  { path: 'clientes/nuevo', component: CrearCliente },
+  { path: '', pathMatch: 'full', canActivate: [inicioGuard], children: [] },
   { path: 'login', component: Login },
   { path: 'registro', component: Registro },
+
+  // Cliente
   { path: 'mis-cuentas', component: MisCuentas, canActivate: [rolGuard(['CLIENTE'])] },
+  {
+    path: 'cuentas/:numero',
+    component: CuentaDetalle,
+    canActivate: [rolGuard(['CLIENTE', 'CAJERO', 'GERENTE'])],
+  },
+
+  // Cajero / Gerente
   { path: 'ventanilla', component: Ventanilla, canActivate: [rolGuard(['CAJERO', 'GERENTE'])] },
+  { path: 'clientes', component: ClienteLista, canActivate: [rolGuard(['CAJERO', 'GERENTE'])] },
+  { path: 'clientes/nuevo', component: CrearCliente, canActivate: [rolGuard(['CAJERO', 'GERENTE'])] },
+
+  // Gerente
   { path: 'empleados/nuevo', component: CrearEmpleado, canActivate: [rolGuard(['GERENTE'])] },
-  { path: 'cuentas/:numero', component: CuentaDetalle, canActivate: [rolGuard(['CLIENTE', 'CAJERO', 'GERENTE'])] },
-  { path: 'cuentas/nueva', component: AperturaCuenta },
-  { path: 'cuentas/deposito', component: Deposito },
-  { path: 'cuentas/retiro', component: Retiro },
-  { path: 'cuentas/transferencia', component: Transferencia },
-  { path: 'cuentas/historial', component: Historial },
+
+  // Admin
+  { path: 'admin/usuarios', component: AdminUsuarios, canActivate: [rolGuard(['ADMIN'])] },
+
+  { path: '**', redirectTo: '' },
 ];
