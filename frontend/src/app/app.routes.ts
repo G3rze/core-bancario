@@ -7,6 +7,7 @@ import { CrearEmpleado } from './components/crear-empleado/crear-empleado';
 import { CuentaDetalle } from './components/cuenta-detalle/cuenta-detalle';
 import { Login } from './components/login/login';
 import { MisCuentas } from './components/mis-cuentas/mis-cuentas';
+import { ReporteFinancieroComponent } from './components/reporte-financiero/reporte-financiero';
 import { Registro } from './components/registro/registro';
 import { Ventanilla } from './components/ventanilla/ventanilla';
 import { rolGuard } from './guards/rol.guard';
@@ -32,6 +33,8 @@ export const routes: Routes = [
 
   // Gerente
   { path: 'empleados/nuevo', component: CrearEmpleado, canActivate: [rolGuard(['GERENTE'])] },
+
+  { path: 'reportes', component: ReporteFinancieroComponent, canActivate: [rolGuard(['GERENTE'])] },
 
   // Admin
   { path: 'admin/usuarios', component: AdminUsuarios, canActivate: [rolGuard(['ADMIN'])] },
