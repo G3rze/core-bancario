@@ -1,0 +1,55 @@
+<section class="reporte">
+  <h2>Reporte financiero</h2>
+
+  @if (cargando()) {
+    <mat-progress-spinner mode="indeterminate" diameter="40" aria-label="Generando reporte" />
+  } @else if (error()) {
+    <p class="error">{{ error() }}</p>
+  } @else if (reporte(); as r) {
+    <div class="tarjetas">
+      <mat-card>
+        <mat-card-header><mat-card-subtitle>Clientes</mat-card-subtitle></mat-card-header>
+        <mat-card-content><p class="valor">{{ r.totalClientes }}</p></mat-card-content>
+      </mat-card>
+      <mat-card>
+        <mat-card-header><mat-card-subtitle>Cuentas</mat-card-subtitle></mat-card-header>
+        <mat-card-content><p class="valor">{{ r.totalCuentas }}</p></mat-card-content>
+      </mat-card>
+      <mat-card>
+        <mat-card-header><mat-card-subtitle>Saldo total</mat-card-subtitle></mat-card-header>
+        <mat-card-content><p class="valor">$ {{ r.saldoTotal | number: '1.2-2' }}</p></mat-card-content>
+      </mat-card>
+      <mat-card>
+        <mat-card-header><mat-card-subtitle>Transacciones</mat-card-subtitle></mat-card-header>
+        <mat-card-content>
+          <p class="valor">{{ r.totalTransacciones }}</p>
+          <p class="detalle">{{ r.transaccionesRechazadas }} rechazadas</p>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="detalles">
+      <mat-card>
+        <mat-card-header><mat-card-title>Cuentas por tipo</mat-card-title></mat-card-header>
+        <mat-card-content>
+          @for (fila of r.cuentasPorTipo | keyvalue; track fila.key) {
+            <p>{{ fila.key }}: <strong>{{ fila.value }}</strong></p>
+          } @empty {
+            <p>Sin cuentas.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card>
+        <mat-card-header><mat-card-title>Monto movido por tipo</mat-card-title></mat-card-header>
+        <mat-card-content>
+          @for (fila of r.montoPorTipoTransaccion | keyvalue; track fila.key) {
+            <p>{{ fila.key }}: <strong>$ {{ fila.value | number: '1.2-2' }}</strong></p>
+          } @empty {
+            <p>Sin transacciones completadas.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</section>

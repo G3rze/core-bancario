@@ -123,13 +123,11 @@ public class CuentaServiceImpl implements CuentaService {
     }
 
     private RegistroTransaccion depositar(String numeroCuenta, BigDecimal monto, Cajero cajero) {
-        Cuenta cuenta = obtenerCuenta(numeroCuenta);
+        Cuenta cuenta = obtenerCuentaConBloqueo(numeroCuenta);
         Transaccion transaccion = new Deposito(cuenta, monto);
         transaccion.setCajero(cajero);
-        synchronized (cuenta) {
-            transaccion.ejecutar();
-            cuentaRepository.save(cuenta);
-        }
+        transaccion.ejecutar();
+        cuentaRepository.save(cuenta);
         return persistirTransaccion(transaccion);
     }
 
@@ -146,16 +144,14 @@ public class CuentaServiceImpl implements CuentaService {
     }
 
     private RegistroTransaccion retirar(String numeroCuenta, BigDecimal monto, Cajero cajero) {
-        Cuenta cuenta = obtenerCuenta(numeroCuenta);
+        Cuenta cuenta = obtenerCuentaConBloqueo(numeroCuenta);
         Transaccion transaccion = new Retiro(cuenta, monto);
         transaccion.setCajero(cajero);
 
-        synchronized (cuenta) {
-            limiteDiario.validar(cuenta, monto);
-            transaccion.ejecutar();
-            limiteDiario.registrar(cuenta, monto);
-            cuentaRepository.save(cuenta);
-        }
+        limiteDiario.validar(cuenta, monto);
+        transaccion.ejecutar();
+        limiteDiario.registrar(cuenta, monto);
+        cuentaRepository.save(cuenta);
 
         return persistirTransaccion(transaccion);
     }
@@ -175,25 +171,23 @@ public class CuentaServiceImpl implements CuentaService {
 
     private RegistroTransaccion transferir(String numeroCuentaOrigen, String numeroCuentaDestino, BigDecimal monto,
                                             Cajero cajero) {
-        Cuenta origen = obtenerCuenta(numeroCuentaOrigen);
-        Cuenta destino = obtenerCuenta(numeroCuentaDestino);
+        // Se bloquean ambas filas (SELECT ... FOR UPDATE) en un orden fijo, por
+        // numero de cuenta, para que dos transferencias cruzadas (A->B y B->A)
+        // en transacciones distintas no puedan deadlockearse esperando cada una
+        // el lock que tiene la otra.
+        boolean origenPrimero = numeroCuentaOrigen.compareTo(numeroCuentaDestino) <= 0;
+        Cuenta primera = obtenerCuentaConBloqueo(origenPrimero ? numeroCuentaOrigen : numeroCuentaDestino);
+        Cuenta segunda = obtenerCuentaConBloqueo(origenPrimero ? numeroCuentaDestino : numeroCuentaOrigen);
+        Cuenta origen = origenPrimero ? primera : segunda;
+        Cuenta destino = origenPrimero ? segunda : primera;
+
         Transaccion transaccion = new Transferencia(origen, destino, monto);
         transaccion.setCajero(cajero);
-        // Se bloquean ambas cuentas en un orden fijo (por numero de cuenta)
-        // para que dos transferencias cruzadas (A->B y B->A) ejecutandose en
-        // hilos distintos al mismo tiempo no puedan deadlockearse esperando
-        // cada una el lock que tiene la otra.
-        Cuenta primero = origen.getNumeroCuenta().compareTo(destino.getNumeroCuenta()) <= 0 ? origen : destino;
-        Cuenta segundo = primero == origen ? destino : origen;
-        synchronized (primero) {
-            synchronized (segundo) {
-                limiteDiario.validar(origen, monto);
-                transaccion.ejecutar();
-                limiteDiario.registrar(origen, monto);
-                cuentaRepository.save(origen);
-                cuentaRepository.save(destino);
-            }
-        }
+        limiteDiario.validar(origen, monto);
+        transaccion.ejecutar();
+        limiteDiario.registrar(origen, monto);
+        cuentaRepository.save(origen);
+        cuentaRepository.save(destino);
         return persistirTransaccion(transaccion);
     }
 
@@ -228,6 +222,12 @@ public class CuentaServiceImpl implements CuentaService {
                 .orElseThrow(() -> CuentaNoEncontradaException.porNumero(numeroCuenta));
     }
 
+    /** Para operaciones que mueven saldo: la fila queda bloqueada hasta el fin de la transaccion. */
+    private Cuenta obtenerCuentaConBloqueo(String numeroCuenta) {
+        return cuentaRepository.buscarConBloqueo(numeroCuenta)
+                .orElseThrow(() -> CuentaNoEncontradaException.porNumero(numeroCuenta));
+    }
+
     private Cajero requireCajero(Cajero cajero) {
         if (cajero == null) {
             throw new IllegalArgumentException("La transaccion de ventanilla requiere un cajero");
@@ -246,7 +246,7 @@ public class CuentaServiceImpl implements CuentaService {
      * Pensada para correr desde un hilo periodico (ver
      * {@code CalculoInteresScheduler}), concurrente con depositos/retiros
      * disparados por requests HTTP sobre las mismas cuentas: calcularInteres()
-     * y ejecutar() corren dentro del mismo synchronized(cuenta) que ya usan
+     * y ejecutar() corren sobre la fila bloqueada con FOR UPDATE, igual que
      * depositar()/retirar(), para no leer un saldo que un deposito/retiro
      * concurrente esta modificando a mitad de camino. Una cuenta con
      * problemas (p. ej. bloqueada) no debe frenar el calculo de las demas,
@@ -270,16 +270,16 @@ public class CuentaServiceImpl implements CuentaService {
     }
 
     private void aplicarInteres(Cuenta cuenta) {
-        Transaccion transaccion;
-        synchronized (cuenta) {
-            BigDecimal interes = cuenta.calcularInteres();
-            if (interes.signum() <= 0) {
-                return;
-            }
-            transaccion = new Deposito(cuenta, interes);
-            transaccion.ejecutar();
-            cuentaRepository.save(cuenta);
+        // Se vuelve a leer la fila con bloqueo para no calcular el interes sobre
+        // un saldo que un deposito/retiro concurrente esta modificando.
+        Cuenta bloqueada = obtenerCuentaConBloqueo(cuenta.getNumeroCuenta());
+        BigDecimal interes = bloqueada.calcularInteres();
+        if (interes.signum() <= 0) {
+            return;
         }
+        Transaccion transaccion = new Deposito(bloqueada, interes);
+        transaccion.ejecutar();
+        cuentaRepository.save(bloqueada);
         persistirTransaccion(transaccion);
     }
 }

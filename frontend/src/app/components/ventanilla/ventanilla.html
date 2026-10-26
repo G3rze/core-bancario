@@ -114,6 +114,9 @@
         <p>Monto: {{ transaccion.monto | number: '1.2-2' }}</p>
         <p>Estado: {{ transaccion.estado }}</p>
         <p>Cajero: {{ transaccion.codigoEmpleadoCajero }}</p>
+        @if (transaccion.selloDigital) {
+          <p>Sello digital: <code>{{ transaccion.selloDigital }}</code></p>
+        }
       </mat-card-content>
     </mat-card>
   }

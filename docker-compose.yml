@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: core_bancario
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d core_bancario"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: core_bancario
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      CORS_ALLOWED_ORIGIN: http://localhost:${WEB_PORT:-4200}
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env (minimo 32 caracteres)}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-7200000}
+      INTERES_PERIODO_MS: ${INTERES_PERIODO_MS:-86400000}
+      BOOTSTRAP_GERENTE_DUI: ${BOOTSTRAP_GERENTE_DUI:-}
+      BOOTSTRAP_GERENTE_NOMBRE: ${BOOTSTRAP_GERENTE_NOMBRE:-Gerente General}
+      BOOTSTRAP_GERENTE_PASSWORD: ${BOOTSTRAP_GERENTE_PASSWORD:-}
+      BOOTSTRAP_ADMIN_DUI: ${BOOTSTRAP_ADMIN_DUI:-}
+      BOOTSTRAP_ADMIN_NOMBRE: ${BOOTSTRAP_ADMIN_NOMBRE:-Administrador}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+    volumes:
+      - datos:/app/datos
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-4200}:80"
+
+volumes:
+  pgdata:
+  datos:

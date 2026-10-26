@@ -4,7 +4,13 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { AperturaCuentaRequest, Cuenta } from '../models/cuenta.model';
-import { MovimientoRequest, Transaccion, TransferenciaRequest } from '../models/transaccion.model';
+import {
+  HistorialResumen,
+  MovimientoRequest,
+  TipoTransaccionFiltro,
+  Transaccion,
+  TransferenciaRequest,
+} from '../models/transaccion.model';
 
 @Injectable({ providedIn: 'root' })
 export class CuentaService {
@@ -36,7 +42,29 @@ export class CuentaService {
     return this.http.post<Transaccion>(`${this.baseUrl}/${numeroCuenta}/transferencias`, request);
   }
 
-  historial(numeroCuenta: string): Observable<Transaccion[]> {
-    return this.http.get<Transaccion[]>(`${this.baseUrl}/${numeroCuenta}/transacciones`);
+  misCuentas(): Observable<Cuenta[]> {
+    return this.http.get<Cuenta[]>(`${this.baseUrl}/mias`);
+  }
+
+  historial(numeroCuenta: string, tipo?: TipoTransaccionFiltro): Observable<Transaccion[]> {
+    return this.http.get<Transaccion[]>(`${this.baseUrl}/${numeroCuenta}/transacciones`, {
+      params: this.paramsTipo(tipo),
+    });
+  }
+
+  resumen(numeroCuenta: string): Observable<HistorialResumen> {
+    return this.http.get<HistorialResumen>(`${this.baseUrl}/${numeroCuenta}/transacciones/resumen`);
+  }
+
+  /** Texto plano del historial; el componente decide como ofrecerlo como descarga. */
+  exportar(numeroCuenta: string, tipo?: TipoTransaccionFiltro): Observable<string> {
+    return this.http.get(`${this.baseUrl}/${numeroCuenta}/transacciones/exportar`, {
+      params: this.paramsTipo(tipo),
+      responseType: 'text',
+    });
+  }
+
+  private paramsTipo(tipo?: TipoTransaccionFiltro): HttpParams {
+    return tipo ? new HttpParams().set('tipo', tipo) : new HttpParams();
   }
 }

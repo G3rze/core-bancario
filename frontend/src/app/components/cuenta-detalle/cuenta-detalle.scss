@@ -1,0 +1,26 @@
+.resumen,
+.comprobante {
+  margin: 1rem 0;
+}
+
+.saldo {
+  font-size: 1.8rem;
+  font-weight: 500;
+  margin: 0.5rem 0 0;
+}
+
+.operacion {
+  display: flex;
+  flex-direction: column;
+  max-width: 360px;
+  padding: 1rem 0;
+}
+
+pre {
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+
+.error {
+  color: var(--mat-sys-error, #b00020);
+}

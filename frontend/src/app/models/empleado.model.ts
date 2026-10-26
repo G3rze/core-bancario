@@ -11,11 +11,6 @@ export interface Empleado {
   nivelAutorizacion: string;
 }
 
-export interface LoginRequest {
-  dui: string;
-  password: string;
-}
-
 // Alineado a com.banco.core.model.dto.NuevoEmpleadoRequest (backend).
 // cajaAsignada solo aplica a CAJERO, montoMaximoAprobacion solo a GERENTE
 // -igual que en el backend, el service no valida cual mandar, lo valida

@@ -13,6 +13,7 @@ import jakarta.persistence.InheritanceType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,6 +35,14 @@ public abstract class Cuenta {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // Bloqueo optimista: si dos transacciones modifican la misma cuenta y
+    // alguna se salta el bloqueo pesimista (ver CuentaRepository), Hibernate
+    // rechaza el segundo UPDATE en vez de pisar el saldo. El default 0
+    // permite que ddl-auto=update agregue la columna a filas ya existentes.
+    @Version
+    @Column(nullable = false, columnDefinition = "bigint default 0")
+    private long version;
 
     @Column(name = "numero_cuenta", nullable = false, unique = true, updatable = false)
     private final String numeroCuenta;

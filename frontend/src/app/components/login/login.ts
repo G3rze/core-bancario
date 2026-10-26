@@ -4,13 +4,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
+  imports: [FormsModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, RouterLink],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
@@ -28,9 +28,9 @@ export class Login {
     this.cargando.set(true);
 
     this.auth.login({ dui: this.dui, password: this.password }).subscribe({
-      next: () => {
+      next: (sesion) => {
         this.cargando.set(false);
-        this.router.navigateByUrl('/ventanilla');
+        this.router.navigateByUrl(this.auth.rutaInicio(sesion.usuario.rol));
       },
       error: (err) => {
         this.cargando.set(false);
