@@ -3,6 +3,7 @@ import { ClienteLista } from './components/cliente-lista/cliente-lista';
 import { CrearCliente } from './components/crear-cliente/crear-cliente';
 import { CrearEmpleado } from './components/crear-empleado/crear-empleado';
 import { Login } from './components/login/login';
+import { MisCuentas } from './components/mis-cuentas/mis-cuentas';
 import { Registro } from './components/registro/registro';
 import { Ventanilla } from './components/ventanilla/ventanilla';
 import { rolGuard } from './guards/rol.guard';
@@ -18,6 +19,7 @@ export const routes: Routes = [
   { path: 'clientes/nuevo', component: CrearCliente },
   { path: 'login', component: Login },
   { path: 'registro', component: Registro },
+  { path: 'mis-cuentas', component: MisCuentas, canActivate: [rolGuard(['CLIENTE'])] },
   { path: 'ventanilla', component: Ventanilla, canActivate: [rolGuard(['CAJERO', 'GERENTE'])] },
   { path: 'empleados/nuevo', component: CrearEmpleado, canActivate: [rolGuard(['GERENTE'])] },
   { path: 'cuentas/nueva', component: AperturaCuenta },
