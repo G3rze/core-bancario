@@ -17,7 +17,7 @@
     <mat-tab-group (selectedTabChange)="limpiarComprobante()">
       <mat-tab label="Depositar">
         <ng-template matTabContent>
-          <form class="operacion" (ngSubmit)="confirmar('DEPOSITO')">
+          <form class="operacion" #f="ngForm" (ngSubmit)="confirmar('DEPOSITO', f)">
             <mat-form-field appearance="outline">
               <mat-label>Monto</mat-label>
               <input matInput type="number" name="monto" [(ngModel)]="monto" min="0.01" step="0.01" required />
@@ -29,7 +29,7 @@
 
       <mat-tab label="Retirar">
         <ng-template matTabContent>
-          <form class="operacion" (ngSubmit)="confirmar('RETIRO')">
+          <form class="operacion" #f="ngForm" (ngSubmit)="confirmar('RETIRO', f)">
             <mat-form-field appearance="outline">
               <mat-label>Monto</mat-label>
               <input matInput type="number" name="monto" [(ngModel)]="monto" min="0.01" step="0.01" required />
@@ -41,7 +41,7 @@
 
       <mat-tab label="Transferir">
         <ng-template matTabContent>
-          <form class="operacion" (ngSubmit)="confirmar('TRANSFERENCIA')">
+          <form class="operacion" #f="ngForm" (ngSubmit)="confirmar('TRANSFERENCIA', f)">
             <mat-form-field appearance="outline">
               <mat-label>Cuenta destino</mat-label>
               <input matInput name="destino" [(ngModel)]="numeroCuentaDestino" required />

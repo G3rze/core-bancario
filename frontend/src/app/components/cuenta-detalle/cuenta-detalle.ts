@@ -1,6 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject, input, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -59,7 +59,7 @@ export class CuentaDetalle implements OnInit {
     this.cargarCuenta();
   }
 
-  confirmar(operacion: Operacion): void {
+  confirmar(operacion: Operacion, formulario: NgForm): void {
     if (this.monto === null) {
       return;
     }
@@ -85,8 +85,7 @@ export class CuentaDetalle implements OnInit {
       next: (transaccion) => {
         this.cargando.set(false);
         this.comprobante.set(transaccion);
-        this.monto = null;
-        this.numeroCuentaDestino = '';
+        formulario.resetForm();
         this.version.update((v) => v + 1);
         this.cargarCuenta();
       },
