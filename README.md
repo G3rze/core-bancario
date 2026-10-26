@@ -40,6 +40,24 @@ Cuando termine (el backend tarda unos segundos en arrancar):
 - Los datos viven en volumenes de Docker (`pgdata` para Postgres, `datos` para el
   log de transacciones) y sobreviven a `docker compose down`.
 
+### Usuarios y datos demo
+
+Con `DEMO_DATA=true` (viene activado en `.env.example`) el backend carga, la primera vez que arranca,
+datos de demostracion para recorrer la aplicacion sin crear nada a mano. Las contrasenas de gerente y
+administrador son las que pongas en `BOOTSTRAP_*` (por defecto `cambia-esta-clave`).
+
+| Rol | DUI | Contrasena | Que tiene |
+|-----|-----|------------|-----------|
+| Gerente | `00000001-1` | `BOOTSTRAP_GERENTE_PASSWORD` | reporte financiero, crear empleados |
+| Administrador | `00000002-2` | `BOOTSTRAP_ADMIN_PASSWORD` | activar/desactivar usuarios |
+| Cajero | `33333333-3` | `cajero123` | ventanilla (Marta Diaz, CAJA-01) |
+| Cliente | `12345678-9` | `clave123` | Maria Lopez: ahorros y corriente con movimientos |
+| Cliente | `87654321-0` | `clave123` | Juan Perez: ahorros y plazo fijo |
+| Cliente (juridica) | `11111111-1` | `clave123` | Comercial El Sol S.A.: cuenta corriente |
+
+Es idempotente (no duplica datos al reiniciar). Para una instalacion vacia usa `DEMO_DATA=false`; para volver
+a empezar de cero usa `docker compose down -v`.
+
 Comandos utiles:
 
 ```bash
