@@ -1,9 +1,12 @@
 package com.banco.core.service.impl;
 
+import com.banco.core.dao.ClienteRepository;
+import com.banco.core.dao.CuentaRepository;
 import com.banco.core.exception.SaldoInsuficienteException;
 import com.banco.core.model.entity.Cuenta;
 import com.banco.core.model.entity.TipoCliente;
 import com.banco.core.model.entity.TipoCuenta;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,6 +39,20 @@ class CuentaServiceConcurrenciaTest {
 
     @Autowired
     private CuentaServiceImpl cuentaService;
+
+    @Autowired
+    private CuentaRepository cuentaRepository;
+
+    @Autowired
+    private ClienteRepository clienteRepository;
+
+    // Este test confirma datos de verdad (sin rollback): se limpian para no
+    // aparecer en listados de otros tests que comparten la misma base H2.
+    @AfterEach
+    void limpiar() {
+        cuentaRepository.deleteAll();
+        clienteRepository.deleteAll();
+    }
 
     @Test
     void retirosConcurrentesNuncaDejanElSaldoNegativoNiPierdenActualizaciones() throws Exception {
