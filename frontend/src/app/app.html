@@ -38,7 +38,7 @@
     Historial
   </a>
 
-  @if (auth.empleadoActual(); as empleado) {
+  @if (auth.usuarioActual(); as empleado) {
 
     <a mat-button routerLink="/ventanilla" aria-label="Modulo de ventanilla">
       <mat-icon aria-label="Ventanilla">storefront</mat-icon>
@@ -76,10 +76,10 @@
     <a
       mat-button
       routerLink="/login"
-      aria-label="Ingreso de empleados">
+      aria-label="Iniciar sesion">
 
       <mat-icon aria-label="Ingreso">login</mat-icon>
-      Ingreso empleados
+      Ingresar
 
     </a>
 
