@@ -18,7 +18,7 @@ Proyecto academico para la materia Programacion II (POO), Universidad Evangelica
 core-bancario/
 ├── backend/    # API REST en Spring Boot
 ├── frontend/   # Aplicacion Angular
-├── docs/       # Documentacion (manual-usuario-cliente.pdf)
+├── docs/       # Manual de usuario (PDF) y diagramas UML (diagrama-clases, diagrama-capas)
 └── docker-compose.yml
 ```
 
@@ -83,7 +83,7 @@ el gerente crea cajeros y otros gerentes; los clientes se autoregistran en
 |-----|-----------|
 | Cliente | `/registro`, `/mis-cuentas`, `/cuentas/:numero` (depositar, retirar, transferir, historial) |
 | Cajero | `/ventanilla`, `/clientes`, `/clientes/nuevo` |
-| Gerente | lo del cajero (ventanilla solo consulta) + `/empleados/nuevo` |
+| Gerente | lo del cajero (ventanilla solo consulta) + `/empleados/nuevo` + `/reportes` (reporte financiero) |
 | Admin | `/admin/usuarios` |
 
 ## Tests
