@@ -1,0 +1,60 @@
+<div class="historial">
+  <div class="barra">
+    <mat-button-toggle-group [value]="filtro()" (change)="filtro.set($event.value)" aria-label="Filtrar por tipo">
+      <mat-button-toggle value="">Todos</mat-button-toggle>
+      <mat-button-toggle value="DEPOSITO">Depositos</mat-button-toggle>
+      <mat-button-toggle value="RETIRO">Retiros</mat-button-toggle>
+      <mat-button-toggle value="TRANSFERENCIA">Transferencias</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    <button mat-stroked-button type="button" (click)="exportar()">
+      <mat-icon>download</mat-icon>
+      Exportar .txt
+    </button>
+  </div>
+
+  @if (resumen(); as r) {
+    <p class="totales">
+      Ingresos: <strong>$ {{ r.ingresos | number: '1.2-2' }}</strong> &middot; Egresos:
+      <strong>$ {{ r.egresos | number: '1.2-2' }}</strong>
+    </p>
+  }
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (cargando()) {
+    <mat-progress-spinner mode="indeterminate" diameter="32" aria-label="Cargando historial" />
+  } @else if (transacciones().length === 0 && !error()) {
+    <p>No hay movimientos para mostrar.</p>
+  } @else if (transacciones().length > 0) {
+    <table mat-table [dataSource]="transacciones()" class="mat-elevation-z1">
+      <ng-container matColumnDef="fecha">
+        <th mat-header-cell *matHeaderCellDef>Fecha</th>
+        <td mat-cell *matCellDef="let t">{{ t.fecha | date: 'dd/MM/yyyy HH:mm' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="tipo">
+        <th mat-header-cell *matHeaderCellDef>Tipo</th>
+        <td mat-cell *matCellDef="let t">{{ t.tipo }}</td>
+      </ng-container>
+      <ng-container matColumnDef="monto">
+        <th mat-header-cell *matHeaderCellDef>Monto</th>
+        <td mat-cell *matCellDef="let t">{{ t.monto | number: '1.2-2' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="saldoPosterior">
+        <th mat-header-cell *matHeaderCellDef>Saldo posterior</th>
+        <td mat-cell *matCellDef="let t">
+          {{ t.saldoPosterior === null ? '-' : (t.saldoPosterior | number: '1.2-2') }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let t">{{ t.estado }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+      <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+    </table>
+  }
+</div>

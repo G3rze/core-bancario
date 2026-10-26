@@ -12,3 +12,6 @@ frontend/.angular/
 .idea/
 .vscode/
 *.iml
+
+# docker-compose
+/.env

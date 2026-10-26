@@ -1,0 +1,23 @@
+.historial {
+  padding: 1rem 0;
+}
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.totales {
+  margin: 1rem 0;
+}
+
+table {
+  width: 100%;
+}
+
+.error {
+  color: var(--mat-sys-error, #b00020);
+}

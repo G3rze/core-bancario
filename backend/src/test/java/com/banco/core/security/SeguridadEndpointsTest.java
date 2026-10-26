@@ -7,6 +7,8 @@ import com.banco.core.controller.AuthController;
 import com.banco.core.controller.ClienteController;
 import com.banco.core.controller.CuentaController;
 import com.banco.core.controller.EmpleadoController;
+import com.banco.core.controller.ReporteController;
+import com.banco.core.service.ReporteService;
 import com.banco.core.model.entity.Cajero;
 import com.banco.core.model.entity.Cliente;
 import com.banco.core.model.entity.Cuenta;
@@ -57,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * mockeados: aqui solo se prueba quien puede entrar, no la logica de negocio.
  */
 @WebMvcTest({CuentaController.class, ClienteController.class, EmpleadoController.class,
-        AdminUsuarioController.class, AuthController.class})
+        AdminUsuarioController.class, AuthController.class, ReporteController.class})
 @Import({SecurityConfig.class, CorsConfig.class, JwtService.class, AutorizacionCuentasImpl.class})
 @TestPropertySource(properties = {
         "banco.jwt.secret=secreto-de-prueba-con-mas-de-32-caracteres!!",
@@ -88,6 +90,9 @@ class SeguridadEndpointsTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private ReporteService reporteService;
 
     @MockitoBean
     private CargadorDeIdentidad cargadorDeIdentidad;
@@ -218,6 +223,23 @@ class SeguridadEndpointsTest {
         mockMvc.perform(get("/api/cuentas").param("duiTitular", DUI_OTRO)
                         .header("Authorization", bearer(DUI_DUENO, "CLIENTE")))
                 .andExpect(status().isForbidden());
+    }
+
+    // ---- reportes: solo gerente ----
+
+    @Test
+    void gerenteVeElReporteFinanciero() throws Exception {
+        mockMvc.perform(get("/api/reportes/financiero").header("Authorization", bearer("00000001-1", "GERENTE")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void cajeroYClienteNoVenElReporteFinanciero() throws Exception {
+        mockMvc.perform(get("/api/reportes/financiero").header("Authorization", bearer("00000003-3", "CAJERO")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/reportes/financiero").header("Authorization", bearer(DUI_DUENO, "CLIENTE")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/reportes/financiero")).andExpect(status().isUnauthorized());
     }
 
     // ---- empleados: solo gerente ----
