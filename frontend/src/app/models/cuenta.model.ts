@@ -13,10 +13,13 @@ export interface Cuenta {
   estado: EstadoCuenta;
   fechaApertura: string;
   numeroClienteTitular: string;
+  // Solo la respuesta de apertura lo trae.
+  comprobante: string | null;
 }
 
 export interface AperturaCuentaRequest {
-  duiTitular: string;
+  // Un CLIENTE lo omite: el backend usa el DUI del token.
+  duiTitular?: string;
   tipoCuenta: TipoCuentaApertura;
   saldoInicial: number;
   // Solo aplica (y es obligatorio) cuando tipoCuenta es PLAZO_FIJO, igual
