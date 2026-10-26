@@ -18,7 +18,7 @@ Proyecto academico para la materia Programacion II (POO), Universidad Evangelica
 core-bancario/
 ├── backend/    # API REST en Spring Boot
 ├── frontend/   # Aplicacion Angular
-├── docs/       # Documentacion del proyecto (incl. manual de usuario)
+├── docs/       # Documentacion (manual-usuario-cliente.pdf)
 └── docker-compose.yml
 ```
 
