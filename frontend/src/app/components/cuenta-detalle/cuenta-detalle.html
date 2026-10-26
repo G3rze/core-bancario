@@ -1,0 +1,84 @@
+<section class="cuenta-detalle">
+  <a mat-button routerLink="/mis-cuentas">&larr; Mis cuentas</a>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  } @else if (cuenta(); as c) {
+    <mat-card class="resumen">
+      <mat-card-header>
+        <mat-card-title>{{ c.tipoCuenta }}</mat-card-title>
+        <mat-card-subtitle>{{ c.numeroCuenta }} &middot; {{ c.estado }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="saldo">$ {{ c.saldo | number: '1.2-2' }}</p>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-tab-group (selectedTabChange)="limpiarComprobante()">
+      <mat-tab label="Depositar">
+        <ng-template matTabContent>
+          <form class="operacion" (ngSubmit)="confirmar('DEPOSITO')">
+            <mat-form-field appearance="outline">
+              <mat-label>Monto</mat-label>
+              <input matInput type="number" name="monto" [(ngModel)]="monto" min="0.01" step="0.01" required />
+            </mat-form-field>
+            <button mat-flat-button color="primary" type="submit" [disabled]="cargando()">Depositar</button>
+          </form>
+        </ng-template>
+      </mat-tab>
+
+      <mat-tab label="Retirar">
+        <ng-template matTabContent>
+          <form class="operacion" (ngSubmit)="confirmar('RETIRO')">
+            <mat-form-field appearance="outline">
+              <mat-label>Monto</mat-label>
+              <input matInput type="number" name="monto" [(ngModel)]="monto" min="0.01" step="0.01" required />
+            </mat-form-field>
+            <button mat-flat-button color="primary" type="submit" [disabled]="cargando()">Retirar</button>
+          </form>
+        </ng-template>
+      </mat-tab>
+
+      <mat-tab label="Transferir">
+        <ng-template matTabContent>
+          <form class="operacion" (ngSubmit)="confirmar('TRANSFERENCIA')">
+            <mat-form-field appearance="outline">
+              <mat-label>Cuenta destino</mat-label>
+              <input matInput name="destino" [(ngModel)]="numeroCuentaDestino" required />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Monto</mat-label>
+              <input matInput type="number" name="monto" [(ngModel)]="monto" min="0.01" step="0.01" required />
+            </mat-form-field>
+            <button mat-flat-button color="primary" type="submit" [disabled]="cargando()">Transferir</button>
+          </form>
+        </ng-template>
+      </mat-tab>
+
+      <mat-tab label="Historial">
+        <ng-template matTabContent>
+          <app-historial-cuenta [numeroCuenta]="numero()" [version]="version()" />
+        </ng-template>
+      </mat-tab>
+    </mat-tab-group>
+
+    @if (comprobante(); as t) {
+      <mat-card class="comprobante">
+        <mat-card-header>
+          <mat-card-title>Comprobante</mat-card-title>
+          <mat-card-subtitle>{{ t.numeroTransaccion }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (t.comprobante) {
+            <pre>{{ t.comprobante }}</pre>
+          } @else {
+            <p>{{ t.tipo }} por $ {{ t.monto | number: '1.2-2' }} &middot; {{ t.estado }}</p>
+          }
+          @if (t.saldoPosterior !== null) {
+            <p>Saldo posterior: $ {{ t.saldoPosterior | number: '1.2-2' }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</section>
