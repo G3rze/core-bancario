@@ -1,27 +1,30 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
 
 /**
- * Adjunta el codigo del empleado logueado a cada request saliente. El login
- * de este avance (backend, ver CLAUDE.md) quedo deliberadamente minimo
- * -sin JWT ni sesiones server-side-, asi que el backend todavia no lee
- * este header; el interceptor deja el seam listo para ese hardening futuro
- * sin bloquear ninguna request hoy (si no hay sesion, deja pasar la
- * request tal cual).
+ * Adjunta el JWT (Authorization: Bearer) a cada request saliente. Un 401 con
+ * sesion activa significa token vencido o invalido: se cierra la sesion y se
+ * manda a /login. El 401 del propio login (credenciales malas) no cuenta,
+ * ahi todavia no hay sesion.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
-  const empleado = auth.empleadoActual();
+  const router = inject(Router);
+  const token = auth.token();
 
-  if (!empleado) {
-    return next(req);
-  }
+  const peticion = token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
 
-  return next(
-    req.clone({
-      setHeaders: { 'X-Codigo-Empleado': empleado.codigoEmpleado },
+  return next(peticion).pipe(
+    catchError((err: HttpErrorResponse) => {
+      if (err.status === 401 && token) {
+        auth.logout();
+        router.navigateByUrl('/login');
+      }
+      return throwError(() => err);
     }),
   );
 };

@@ -1,23 +1,25 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
-import { RolEmpleado } from '../models/empleado.model';
+import { Rol } from '../models/sesion.model';
 import { AuthService } from '../services/auth.service';
 
 /**
- * Guard por rol para las rutas de empleado (Cajero/Gerente). No hay login
- * de Cliente en ninguna de las 7 historias de usuario de este avance, asi
- * que las rutas de cliente (p. ej. /clientes) no usan este guard.
+ * Guard por rol. Sin sesion manda a /login; con sesion pero sin el rol
+ * requerido, a la pagina de inicio de su propio rol.
  */
-export function rolGuard(rolesPermitidos: RolEmpleado[]): CanActivateFn {
+export function rolGuard(rolesPermitidos: Rol[]): CanActivateFn {
   return () => {
     const auth = inject(AuthService);
     const router = inject(Router);
-    const empleado = auth.empleadoActual();
+    const usuario = auth.usuarioActual();
 
-    if (empleado && rolesPermitidos.includes(empleado.rol)) {
+    if (!usuario) {
+      return router.createUrlTree(['/login']);
+    }
+    if (rolesPermitidos.includes(usuario.rol)) {
       return true;
     }
-    return router.createUrlTree(['/login']);
+    return router.createUrlTree([auth.rutaInicio(usuario.rol)]);
   };
 }
